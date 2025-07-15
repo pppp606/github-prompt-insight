@@ -85,16 +85,31 @@ export class LLMWrapper {
   }
 
   async translateText(text: string, targetLanguage: string): Promise<LLMResponse> {
-    const prompt = `Translate the following text to ${targetLanguage}. Only return the translated text without any additional explanation or formatting:
+    const prompt = `Translate the following Markdown content to ${targetLanguage}. 
+    
+Rules:
+- Preserve the original Markdown structure and formatting
+- Only translate the text content, not the Markdown syntax
+- Do not translate code blocks, inline code, or technical terms
+- Keep links and references intact
+- Return only the translated content without additional explanations
 
+Content to translate:
 ${text}`;
     
     return this.generateResponse(prompt);
   }
 
-  async summarizeText(text: string, maxSentences: number = 3): Promise<LLMResponse> {
-    const prompt = `Summarize the following text in ${maxSentences} sentences or less. Be concise and capture the main points:
+  async summarizeText(text: string, maxSentences: number = 2): Promise<LLMResponse> {
+    const prompt = `Summarize the following Markdown content in ${maxSentences} sentences or less.
 
+Rules:
+- Focus on the main topics and key points
+- Use clear, concise language
+- Capture the essence of the content
+- Return only the summary without additional explanations
+
+Content to summarize:
 ${text}`;
     
     return this.generateResponse(prompt);

@@ -22,6 +22,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
+
+  if (request.action === 'get_extension_config') {
+    chrome.storage.sync.get(null, (result) => {
+      const config = buildExtensionConfig(result);
+      sendResponse({ extensionConfig: config });
+    });
+    return true;
+  }
 });
+
+function buildExtensionConfig(storageData: any): any {
+  const provider = storageData.selectedProvider;
+  if (!provider) return null;
+
+  let apiKey = '';
+  if (provider === 'openai') {
+    apiKey = storageData.openaiApiKey || '';
+  } else if (provider === 'google') {
+    apiKey = storageData.googleApiKey || '';
+  } else if (provider === 'anthropic') {
+    apiKey = storageData.anthropicApiKey || '';
+  }
+
+  return {
+    llmProvider: provider,
+    apiKey,
+    model: storageData.selectedModel,
+    defaultLanguage: storageData.userPreferences?.language || 'Japanese',
+  };
+}
 
 export {};

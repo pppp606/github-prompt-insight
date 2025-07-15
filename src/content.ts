@@ -35,7 +35,7 @@ class GitHubMarkdownEnhancer {
   private async loadConfig(): Promise<ExtensionConfig | null> {
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
-        { action: 'get_storage', key: 'extensionConfig' },
+        { action: 'get_extension_config' },
         (response) => {
           resolve(response.extensionConfig || null);
         }
@@ -149,12 +149,17 @@ class GitHubMarkdownEnhancer {
       return;
     }
 
-    const text = element.textContent || '';
+    const processedText = this.extractAndProcessMarkdownContent(element);
+    if (!processedText.trim()) {
+      this.showError('No content found to translate');
+      return;
+    }
+
     const targetLanguage = this.config?.defaultLanguage || 'Japanese';
     
     try {
       this.showLoading(element, 'Translating...');
-      const response = await this.llmWrapper.translateText(text, targetLanguage);
+      const response = await this.llmWrapper.translateText(processedText, targetLanguage);
       this.showResult(element, response.content, 'Translation');
     } catch (error) {
       this.showError(`Translation failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -167,15 +172,47 @@ class GitHubMarkdownEnhancer {
       return;
     }
 
-    const text = element.textContent || '';
+    const processedText = this.extractAndProcessMarkdownContent(element);
+    if (!processedText.trim()) {
+      this.showError('No content found to summarize');
+      return;
+    }
     
     try {
       this.showLoading(element, 'Summarizing...');
-      const response = await this.llmWrapper.summarizeText(text);
+      const response = await this.llmWrapper.summarizeText(processedText);
       this.showResult(element, response.content, 'Summary');
     } catch (error) {
       this.showError(`Summarization failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  private extractAndProcessMarkdownContent(element: HTMLElement): string {
+    const clone = element.cloneNode(true) as HTMLElement;
+    
+    // Remove code blocks, inline code, and other elements that shouldn't be processed
+    const elementsToRemove = [
+      'pre', 'code', 
+      '.highlight', '.js-file-line-container',
+      '.diff-table', '.js-diff-table',
+      '.github-markdown-ai-buttons', '.github-prompt-insight-result',
+      '.js-details-container', '.js-navigation-container'
+    ];
+    
+    elementsToRemove.forEach(selector => {
+      const elements = clone.querySelectorAll(selector);
+      elements.forEach(el => el.remove());
+    });
+
+    // Extract text content while preserving structure
+    const textContent = clone.textContent || '';
+    
+    // Clean up the text
+    return textContent
+      .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+      .replace(/^\s+|\s+$/g, '') // Trim whitespace
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .trim();
   }
 
   private showLoading(element: HTMLElement, message: string): void {
