@@ -1,12 +1,6 @@
 import { LLMWrapper, LLMConfig } from './llm';
 import { sanitizeForLLM, preprocessForTranslation, preprocessForSummarization, isValidContent, getContentPreview } from './utils/textProcessor';
-
-interface ExtensionConfig {
-  llmProvider: 'openai' | 'anthropic' | 'google';
-  apiKey: string;
-  model?: string;
-  defaultLanguage: string;
-}
+import { ExtensionConfig, storageManager } from './utils/storage';
 
 class GitHubMarkdownEnhancer {
   private config: ExtensionConfig | null = null;
@@ -34,14 +28,12 @@ class GitHubMarkdownEnhancer {
   }
 
   private async loadConfig(): Promise<ExtensionConfig | null> {
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { action: 'get_storage', key: 'extensionConfig' },
-        (response) => {
-          resolve(response.extensionConfig || null);
-        }
-      );
-    });
+    try {
+      return await storageManager.getConfigViaRuntime();
+    } catch (error) {
+      console.error('Failed to load configuration:', error);
+      return null;
+    }
   }
 
   private setupUI(): void {
