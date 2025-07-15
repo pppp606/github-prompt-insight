@@ -123,6 +123,10 @@ class GitHubMarkdownEnhancer {
       display: flex;
       gap: 4px;
       z-index: 1000;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 6px;
+      padding: 2px;
+      backdrop-filter: blur(3px);
     `;
 
     const translateButton = this.createButton('🌐', 'Translate', () => {
@@ -136,8 +140,20 @@ class GitHubMarkdownEnhancer {
     buttonContainer.appendChild(translateButton);
     buttonContainer.appendChild(summarizeButton);
 
-    element.style.position = 'relative';
+    // Ensure the parent element can contain absolutely positioned children
+    const currentPosition = window.getComputedStyle(element).position;
+    if (currentPosition === 'static') {
+      element.style.position = 'relative';
+    }
+    
     element.appendChild(buttonContainer);
+
+    // Add fade-in animation
+    buttonContainer.style.opacity = '0';
+    buttonContainer.style.transition = 'opacity 0.3s ease-in-out';
+    setTimeout(() => {
+      buttonContainer.style.opacity = '1';
+    }, 10);
   }
 
   private createButton(icon: string, title: string, onclick: () => void): HTMLButtonElement {
