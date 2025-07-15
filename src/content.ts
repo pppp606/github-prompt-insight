@@ -1,4 +1,5 @@
 import { LLMWrapper, LLMConfig } from './llm';
+import { sanitizeForLLM, preprocessForTranslation, preprocessForSummarization, isValidContent, getContentPreview } from './utils/textProcessor';
 
 interface ExtensionConfig {
   llmProvider: 'openai' | 'anthropic' | 'google';
@@ -191,12 +192,19 @@ class GitHubMarkdownEnhancer {
       return;
     }
 
-    const text = element.textContent || '';
+    const rawText = sanitizeForLLM(element);
+    if (!isValidContent(rawText)) {
+      this.showError('No meaningful content found to translate');
+      return;
+    }
+
+    const processedText = preprocessForTranslation(rawText);
     const targetLanguage = this.config?.defaultLanguage || 'Japanese';
+    const preview = getContentPreview(processedText, 80);
     
     try {
-      this.showLoading(element, 'Translating...');
-      const response = await this.llmWrapper.translateText(text, targetLanguage);
+      this.showLoading(element, `Translating: "${preview}"...`);
+      const response = await this.llmWrapper.translateText(processedText, targetLanguage);
       this.showResult(element, response.content, 'Translation');
     } catch (error) {
       this.showError(`Translation failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -209,11 +217,18 @@ class GitHubMarkdownEnhancer {
       return;
     }
 
-    const text = element.textContent || '';
+    const rawText = sanitizeForLLM(element);
+    if (!isValidContent(rawText)) {
+      this.showError('No meaningful content found to summarize');
+      return;
+    }
+
+    const processedText = preprocessForSummarization(rawText);
+    const preview = getContentPreview(processedText, 80);
     
     try {
-      this.showLoading(element, 'Summarizing...');
-      const response = await this.llmWrapper.summarizeText(text);
+      this.showLoading(element, `Summarizing: "${preview}"...`);
+      const response = await this.llmWrapper.summarizeText(processedText);
       this.showResult(element, response.content, 'Summary');
     } catch (error) {
       this.showError(`Summarization failed: ${error instanceof Error ? error.message : String(error)}`);
