@@ -1,0 +1,33 @@
+{
+  "name": "github-prompt-insight",
+  "version": "0.1.0",
+  "description": "Chrome Extension for GitHub Markdown translation and summary",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "chrome-extension",
+    "github",
+    "markdown",
+    "translation",
+    "summary",
+    "langchain"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chrome": "^0.0.254",
+    "@types/node": "^20.10.5",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10"
+  },
+  "dependencies": {
+    "@langchain/anthropic": "^0.1.1",
+    "@langchain/google-genai": "^0.0.7",
+    "@langchain/openai": "^0.0.10",
+    "langchain": "^0.1.0"
+  }
+}

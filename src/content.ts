@@ -1,0 +1,262 @@
+import { LLMWrapper, LLMConfig } from './llm';
+
+interface ExtensionConfig {
+  llmProvider: 'openai' | 'anthropic' | 'google';
+  apiKey: string;
+  model?: string;
+  defaultLanguage: string;
+}
+
+class GitHubMarkdownEnhancer {
+  private config: ExtensionConfig | null = null;
+  private llmWrapper: LLMWrapper | null = null;
+  private isInitialized = false;
+
+  async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+
+    try {
+      this.config = await this.loadConfig();
+      if (this.config && this.config.apiKey) {
+        const llmConfig: LLMConfig = {
+          provider: this.config.llmProvider,
+          apiKey: this.config.apiKey,
+          model: this.config.model,
+        };
+        this.llmWrapper = new LLMWrapper(llmConfig);
+      }
+      this.isInitialized = true;
+      this.setupUI();
+    } catch (error) {
+      console.error('Failed to initialize GitHub Markdown Enhancer:', error);
+    }
+  }
+
+  private async loadConfig(): Promise<ExtensionConfig | null> {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { action: 'get_storage', key: 'extensionConfig' },
+        (response) => {
+          resolve(response.extensionConfig || null);
+        }
+      );
+    });
+  }
+
+  private setupUI(): void {
+    const markdownElements = document.querySelectorAll('.markdown-body, .js-comment-body');
+    
+    markdownElements.forEach((element) => {
+      this.addEnhancementButtons(element as HTMLElement);
+    });
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node as HTMLElement;
+            const markdownNodes = element.querySelectorAll('.markdown-body, .js-comment-body');
+            markdownNodes.forEach((mdElement) => {
+              this.addEnhancementButtons(mdElement as HTMLElement);
+            });
+          }
+        });
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  private addEnhancementButtons(element: HTMLElement): void {
+    if (element.querySelector('.github-prompt-insight-buttons')) return;
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'github-prompt-insight-buttons';
+    buttonContainer.style.cssText = `
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+      z-index: 1000;
+    `;
+
+    const translateButton = this.createButton('🌐', 'Translate', () => {
+      this.translateElement(element);
+    });
+
+    const summarizeButton = this.createButton('📋', 'Summarize', () => {
+      this.summarizeElement(element);
+    });
+
+    buttonContainer.appendChild(translateButton);
+    buttonContainer.appendChild(summarizeButton);
+
+    element.style.position = 'relative';
+    element.appendChild(buttonContainer);
+  }
+
+  private createButton(icon: string, title: string, onclick: () => void): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.innerHTML = icon;
+    button.title = title;
+    button.style.cssText = `
+      background: #24292e;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 12px;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    `;
+    
+    button.addEventListener('mouseenter', () => {
+      button.style.opacity = '1';
+    });
+    
+    button.addEventListener('mouseleave', () => {
+      button.style.opacity = '0.8';
+    });
+    
+    button.addEventListener('click', onclick);
+    
+    return button;
+  }
+
+  private async translateElement(element: HTMLElement): Promise<void> {
+    if (!this.llmWrapper) {
+      this.showError('Please configure API settings first');
+      return;
+    }
+
+    const text = element.textContent || '';
+    const targetLanguage = this.config?.defaultLanguage || 'Japanese';
+    
+    try {
+      this.showLoading(element, 'Translating...');
+      const response = await this.llmWrapper.translateText(text, targetLanguage);
+      this.showResult(element, response.content, 'Translation');
+    } catch (error) {
+      this.showError(`Translation failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async summarizeElement(element: HTMLElement): Promise<void> {
+    if (!this.llmWrapper) {
+      this.showError('Please configure API settings first');
+      return;
+    }
+
+    const text = element.textContent || '';
+    
+    try {
+      this.showLoading(element, 'Summarizing...');
+      const response = await this.llmWrapper.summarizeText(text);
+      this.showResult(element, response.content, 'Summary');
+    } catch (error) {
+      this.showError(`Summarization failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private showLoading(element: HTMLElement, message: string): void {
+    const existing = element.querySelector('.github-prompt-insight-result');
+    if (existing) existing.remove();
+
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'github-prompt-insight-result';
+    loadingDiv.style.cssText = `
+      background: #f6f8fa;
+      border: 1px solid #d1d5da;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 14px;
+      color: #586069;
+    `;
+    loadingDiv.textContent = message;
+    
+    element.appendChild(loadingDiv);
+  }
+
+  private showResult(element: HTMLElement, content: string, type: string): void {
+    const existing = element.querySelector('.github-prompt-insight-result');
+    if (existing) existing.remove();
+
+    const resultDiv = document.createElement('div');
+    resultDiv.className = 'github-prompt-insight-result';
+    resultDiv.style.cssText = `
+      background: #f6f8fa;
+      border: 1px solid #d1d5da;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+    `;
+
+    const header = document.createElement('div');
+    header.style.cssText = `
+      font-weight: 600;
+      color: #24292e;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #e1e4e8;
+      padding-bottom: 4px;
+    `;
+    header.textContent = type;
+
+    const contentDiv = document.createElement('div');
+    contentDiv.style.cssText = `
+      color: #24292e;
+      white-space: pre-wrap;
+    `;
+    contentDiv.textContent = content;
+
+    resultDiv.appendChild(header);
+    resultDiv.appendChild(contentDiv);
+    element.appendChild(resultDiv);
+  }
+
+  private showError(message: string): void {
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #d73a49;
+      color: white;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      z-index: 10000;
+      max-width: 300px;
+    `;
+    errorDiv.textContent = message;
+    
+    document.body.appendChild(errorDiv);
+    
+    setTimeout(() => {
+      errorDiv.remove();
+    }, 5000);
+  }
+}
+
+const enhancer = new GitHubMarkdownEnhancer();
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => enhancer.initialize());
+} else {
+  enhancer.initialize();
+}
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'toggle_sidebar') {
+    console.log('Toggle sidebar requested');
+  }
+});
+
+export {};
