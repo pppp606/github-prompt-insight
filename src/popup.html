@@ -53,12 +53,10 @@
     Enhance your GitHub experience with AI-powered translation and summarization features.
   </div>
   
+  <div id="status" style="margin-bottom: 15px; font-size: 14px; font-weight: 500;"></div>
+  
   <a href="#" id="optionsLink" class="button">⚙️ Settings</a>
   
-  <script>
-    document.getElementById('optionsLink').addEventListener('click', () => {
-      chrome.runtime.openOptionsPage();
-    });
-  </script>
+  <script type="module" src="popup-script.js"></script>
 </body>
 </html>

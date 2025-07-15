@@ -44,21 +44,17 @@ class GitHubMarkdownEnhancer {
   }
 
   private setupUI(): void {
-    const markdownElements = document.querySelectorAll('.markdown-body, .js-comment-body');
-    
-    markdownElements.forEach((element) => {
-      this.addEnhancementButtons(element as HTMLElement);
-    });
+    if (this.isMarkdownFile()) {
+      this.addButtonsToMarkdownFile();
+    }
 
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE) {
-            const element = node as HTMLElement;
-            const markdownNodes = element.querySelectorAll('.markdown-body, .js-comment-body');
-            markdownNodes.forEach((mdElement) => {
-              this.addEnhancementButtons(mdElement as HTMLElement);
-            });
+            if (this.isMarkdownFile()) {
+              this.addButtonsToMarkdownFile();
+            }
           }
         });
       });
@@ -70,63 +66,82 @@ class GitHubMarkdownEnhancer {
     });
   }
 
-  private addEnhancementButtons(element: HTMLElement): void {
-    if (element.querySelector('.github-prompt-insight-buttons')) return;
+  private isMarkdownFile(): boolean {
+    const pathname = window.location.pathname;
+    const supportedExtensions = ['.md', '.mdc', '.markdown'];
+    return supportedExtensions.some(ext => pathname.endsWith(ext)) || 
+           pathname.includes('/blob/') && supportedExtensions.some(ext => pathname.includes(ext));
+  }
+
+  private addButtonsToMarkdownFile(): void {
+    const fileActions = document.querySelector('.Box-header .d-flex .BtnGroup, .Box-header .d-flex .btn-group');
+    if (!fileActions || fileActions.querySelector('.github-markdown-ai-buttons')) return;
 
     const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'github-prompt-insight-buttons';
+    buttonContainer.className = 'github-markdown-ai-buttons BtnGroup ml-2';
     buttonContainer.style.cssText = `
-      position: absolute;
-      top: 8px;
-      right: 8px;
       display: flex;
-      gap: 4px;
-      z-index: 1000;
+      margin-left: 8px;
     `;
 
-    const translateButton = this.createButton('🌐', 'Translate', () => {
-      this.translateElement(element);
+    const translateButton = this.createActionButton('🌐', 'Translate to Japanese', () => {
+      this.translateMarkdownFile();
     });
 
-    const summarizeButton = this.createButton('📋', 'Summarize', () => {
-      this.summarizeElement(element);
+    const summarizeButton = this.createActionButton('📋', 'Summarize', () => {
+      this.summarizeMarkdownFile();
     });
 
     buttonContainer.appendChild(translateButton);
     buttonContainer.appendChild(summarizeButton);
 
-    element.style.position = 'relative';
-    element.appendChild(buttonContainer);
+    fileActions.appendChild(buttonContainer);
   }
 
-  private createButton(icon: string, title: string, onclick: () => void): HTMLButtonElement {
+  private createActionButton(icon: string, title: string, onclick: () => void): HTMLButtonElement {
     const button = document.createElement('button');
-    button.innerHTML = icon;
+    button.innerHTML = `${icon} ${title.split(' ')[0]}`;
     button.title = title;
+    button.className = 'btn btn-sm';
     button.style.cssText = `
-      background: #24292e;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 4px 8px;
+      background: #f6f8fa;
+      border: 1px solid #d1d5da;
+      color: #24292e;
+      border-radius: 6px;
+      padding: 5px 12px;
       cursor: pointer;
       font-size: 12px;
-      opacity: 0.8;
-      transition: opacity 0.2s;
+      margin-right: 4px;
+      transition: background-color 0.2s;
     `;
     
     button.addEventListener('mouseenter', () => {
-      button.style.opacity = '1';
+      button.style.backgroundColor = '#e1e4e8';
     });
     
     button.addEventListener('mouseleave', () => {
-      button.style.opacity = '0.8';
+      button.style.backgroundColor = '#f6f8fa';
     });
     
     button.addEventListener('click', onclick);
     
     return button;
   }
+
+  private async translateMarkdownFile(): Promise<void> {
+    const markdownBody = document.querySelector('.markdown-body') || document.querySelector('.js-comment-body');
+    if (markdownBody) {
+      await this.translateElement(markdownBody as HTMLElement);
+    }
+  }
+
+  private async summarizeMarkdownFile(): Promise<void> {
+    const markdownBody = document.querySelector('.markdown-body') || document.querySelector('.js-comment-body');
+    if (markdownBody) {
+      await this.summarizeElement(markdownBody as HTMLElement);
+    }
+  }
+
 
   private async translateElement(element: HTMLElement): Promise<void> {
     if (!this.llmWrapper) {

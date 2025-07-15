@@ -1,5 +1,8 @@
+import { StorageManager } from '@/utils';
+import { LLMProvider, ChromeStorageData } from '@/types';
+
 interface ExtensionConfig {
-  llmProvider: 'openai' | 'anthropic' | 'google';
+  llmProvider: LLMProvider;
   apiKey: string;
   model?: string;
   defaultLanguage: string;
@@ -35,7 +38,7 @@ class OptionsManager {
   }
 
   private handleProviderChange(): void {
-    const provider = this.providerSelect.value as 'openai' | 'anthropic' | 'google';
+    const provider = this.providerSelect.value as LLMProvider;
     
     if (provider) {
       this.modelSection.style.display = 'block';
@@ -45,7 +48,7 @@ class OptionsManager {
     }
   }
 
-  private updateModelHelp(provider: 'openai' | 'anthropic' | 'google'): void {
+  private updateModelHelp(provider: LLMProvider): void {
     const modelInfo = {
       openai: 'Default: gpt-3.5-turbo (e.g., gpt-4, gpt-3.5-turbo)',
       anthropic: 'Default: claude-3-sonnet-20240229 (e.g., claude-3-opus-20240229, claude-3-haiku-20240307)',
@@ -59,7 +62,7 @@ class OptionsManager {
     e.preventDefault();
     
     const config: ExtensionConfig = {
-      llmProvider: this.providerSelect.value as 'openai' | 'anthropic' | 'google',
+      llmProvider: this.providerSelect.value as LLMProvider,
       apiKey: this.apiKeyInput.value,
       model: this.modelInput.value || undefined,
       defaultLanguage: this.defaultLanguageInput.value,
@@ -74,24 +77,27 @@ class OptionsManager {
   }
 
   private async saveSettings(config: ExtensionConfig): Promise<void> {
-    return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(
-        { 
-          action: 'set_storage', 
-          key: 'extensionConfig',
-          value: config
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            reject(chrome.runtime.lastError);
-          } else if (response.success) {
-            resolve();
-          } else {
-            reject(new Error('Failed to save settings'));
-          }
-        }
-      );
-    });
+    const storageData: ChromeStorageData = {
+      selectedProvider: config.llmProvider,
+      [`${config.llmProvider}ApiKey`]: config.apiKey,
+      userPreferences: {
+        theme: 'auto',
+        language: config.defaultLanguage,
+        autoTranslate: false,
+        showSummary: true,
+      },
+    };
+
+    // Store API key in the appropriate field
+    if (config.llmProvider === 'openai') {
+      storageData.openaiApiKey = config.apiKey;
+    } else if (config.llmProvider === 'google') {
+      storageData.googleApiKey = config.apiKey;
+    } else if (config.llmProvider === 'anthropic') {
+      storageData.anthropicApiKey = config.apiKey;
+    }
+
+    await StorageManager.setMultiple(storageData);
   }
 
   private async loadSettings(): Promise<void> {
@@ -110,14 +116,29 @@ class OptionsManager {
   }
 
   private async getStoredSettings(): Promise<ExtensionConfig | null> {
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { action: 'get_storage', key: 'extensionConfig' },
-        (response) => {
-          resolve(response.extensionConfig || null);
-        }
-      );
-    });
+    const storageData = await StorageManager.getAll();
+    
+    if (!storageData.selectedProvider) {
+      return null;
+    }
+
+    const provider = storageData.selectedProvider;
+    let apiKey = '';
+    
+    if (provider === 'openai') {
+      apiKey = storageData.openaiApiKey || '';
+    } else if (provider === 'google') {
+      apiKey = storageData.googleApiKey || '';
+    } else if (provider === 'anthropic') {
+      apiKey = storageData.anthropicApiKey || '';
+    }
+
+    return {
+      llmProvider: provider,
+      apiKey,
+      model: undefined, // Model not stored currently
+      defaultLanguage: storageData.userPreferences?.language || 'Japanese',
+    };
   }
 
   private showStatus(message: string, type: 'success' | 'error'): void {

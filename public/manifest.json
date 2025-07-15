@@ -1,23 +1,30 @@
 {
   "manifest_version": 3,
-  "name": "GitHub Prompt Insight",
-  "version": "0.1.0",
-  "description": "Chrome Extension for GitHub Markdown translation and summary",
+  "name": "GitHub Markdown AI Extension",
+  "version": "1.0.0",
+  "description": "Chrome extension that adds AI-powered translation and summarization to GitHub Markdown files",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "contextMenus",
+    "scripting"
   ],
   "host_permissions": [
-    "https://github.com/*"
+    "https://github.com/*",
+    "https://api.openai.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.anthropic.com/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["https://github.com/*"],
       "js": ["content.js"],
-      "css": ["content.css"]
+      "css": ["content.css"],
+      "run_at": "document_idle"
     }
   ],
   "options_ui": {
@@ -26,11 +33,17 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "GitHub Prompt Insight"
+    "default_title": "GitHub Markdown AI Extension"
   },
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
     "128": "icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["*.js", "*.css"],
+      "matches": ["https://github.com/*"]
+    }
+  ]
 }
