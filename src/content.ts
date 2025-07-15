@@ -2,6 +2,7 @@ import { LLMWrapper, LLMConfig } from './llm';
 import { sanitizeForLLM, preprocessForTranslation, preprocessForSummarization, isValidContent, getContentPreview } from './utils/textProcessor';
 import { ExtensionConfig, storageManager } from './utils/storage';
 import { translateElement, getTranslationPreview, formatTranslationResult } from './utils/translate';
+import { summarizeElement, getSummaryPreview, formatSummaryResult, getOptimalSummaryLength } from './utils/summarize';
 
 class GitHubMarkdownEnhancer {
   private config: ExtensionConfig | null = null;
@@ -215,18 +216,24 @@ class GitHubMarkdownEnhancer {
     }
 
     const rawText = sanitizeForLLM(element);
-    if (!isValidContent(rawText)) {
-      this.showError('No meaningful content found to summarize');
-      return;
-    }
-
-    const processedText = preprocessForSummarization(rawText);
-    const preview = getContentPreview(processedText, 80);
+    const preview = getSummaryPreview(rawText, 60);
+    
+    // Determine optimal summary length based on content
+    const optimalLength = getOptimalSummaryLength(rawText, 'documentation');
     
     try {
       this.showLoading(element, `Summarizing: "${preview}"...`);
-      const response = await this.llmWrapper.summarizeText(processedText);
-      this.showResult(element, response.content, 'Summary');
+      
+      const response = await summarizeElement(element, this.llmWrapper, optimalLength);
+      
+      // Format the result for better presentation
+      const formattedResult = formatSummaryResult(
+        rawText,
+        response.content,
+        response.provider
+      );
+      
+      this.showResult(element, formattedResult, `Summary (${optimalLength} sentence${optimalLength > 1 ? 's' : ''})`);
     } catch (error) {
       this.showError(`Summarization failed: ${error instanceof Error ? error.message : String(error)}`);
     }
