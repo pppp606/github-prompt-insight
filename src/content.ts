@@ -1,6 +1,7 @@
 import { LLMWrapper, LLMConfig } from './llm';
 import { sanitizeForLLM, preprocessForTranslation, preprocessForSummarization, isValidContent, getContentPreview } from './utils/textProcessor';
 import { ExtensionConfig, storageManager } from './utils/storage';
+import { translateElement, getTranslationPreview, formatTranslationResult } from './utils/translate';
 
 class GitHubMarkdownEnhancer {
   private config: ExtensionConfig | null = null;
@@ -184,20 +185,24 @@ class GitHubMarkdownEnhancer {
       return;
     }
 
-    const rawText = sanitizeForLLM(element);
-    if (!isValidContent(rawText)) {
-      this.showError('No meaningful content found to translate');
-      return;
-    }
-
-    const processedText = preprocessForTranslation(rawText);
     const targetLanguage = this.config?.defaultLanguage || 'Japanese';
-    const preview = getContentPreview(processedText, 80);
+    const rawText = sanitizeForLLM(element);
+    const preview = getTranslationPreview(rawText, 60);
     
     try {
-      this.showLoading(element, `Translating: "${preview}"...`);
-      const response = await this.llmWrapper.translateText(processedText, targetLanguage);
-      this.showResult(element, response.content, 'Translation');
+      this.showLoading(element, `Translating to ${targetLanguage}: "${preview}"...`);
+      
+      const response = await translateElement(element, targetLanguage, this.llmWrapper);
+      
+      // Format the result for better presentation
+      const formattedResult = formatTranslationResult(
+        rawText,
+        response.content,
+        targetLanguage,
+        response.provider
+      );
+      
+      this.showResult(element, formattedResult, `Translation to ${targetLanguage}`);
     } catch (error) {
       this.showError(`Translation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
