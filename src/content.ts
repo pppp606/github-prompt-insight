@@ -145,13 +145,13 @@ class GitHubMarkdownEnhancer {
 
   private async translateElement(element: HTMLElement): Promise<void> {
     if (!this.llmWrapper) {
-      this.showError('Please configure API settings first');
+      this.showError('Please configure API settings first. Go to Extension Options to set up your LLM provider.', element);
       return;
     }
 
     const processedText = this.extractAndProcessMarkdownContent(element);
     if (!processedText.trim()) {
-      this.showError('No content found to translate');
+      this.showError('No content found to translate. The markdown file may be empty or contain only code blocks.', element);
       return;
     }
 
@@ -162,19 +162,20 @@ class GitHubMarkdownEnhancer {
       const response = await this.llmWrapper.translateText(processedText, targetLanguage);
       this.showResult(element, response.content, 'Translation');
     } catch (error) {
-      this.showError(`Translation failed: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.showError(`Translation failed: ${errorMessage}. Please check your API key and try again.`, element);
     }
   }
 
   private async summarizeElement(element: HTMLElement): Promise<void> {
     if (!this.llmWrapper) {
-      this.showError('Please configure API settings first');
+      this.showError('Please configure API settings first. Go to Extension Options to set up your LLM provider.', element);
       return;
     }
 
     const processedText = this.extractAndProcessMarkdownContent(element);
     if (!processedText.trim()) {
-      this.showError('No content found to summarize');
+      this.showError('No content found to summarize. The markdown file may be empty or contain only code blocks.', element);
       return;
     }
     
@@ -183,7 +184,8 @@ class GitHubMarkdownEnhancer {
       const response = await this.llmWrapper.summarizeText(processedText);
       this.showResult(element, response.content, 'Summary');
     } catch (error) {
-      this.showError(`Summarization failed: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.showError(`Summarization failed: ${errorMessage}. Please check your API key and try again.`, element);
     }
   }
 
@@ -273,7 +275,13 @@ class GitHubMarkdownEnhancer {
     element.appendChild(resultDiv);
   }
 
-  private showError(message: string): void {
+  private showError(message: string, element?: HTMLElement): void {
+    // Show error in result area if element provided
+    if (element) {
+      this.showResult(element, message, 'Error');
+    }
+    
+    // Also show toast notification
     const errorDiv = document.createElement('div');
     errorDiv.style.cssText = `
       position: fixed;
@@ -286,13 +294,16 @@ class GitHubMarkdownEnhancer {
       font-size: 14px;
       z-index: 10000;
       max-width: 300px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     `;
     errorDiv.textContent = message;
     
     document.body.appendChild(errorDiv);
     
     setTimeout(() => {
-      errorDiv.remove();
+      if (errorDiv.parentNode) {
+        errorDiv.remove();
+      }
     }, 5000);
   }
 }
