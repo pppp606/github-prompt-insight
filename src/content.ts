@@ -44,7 +44,9 @@ class GitHubMarkdownEnhancer {
   }
 
   private setupUI(): void {
-    const markdownElements = document.querySelectorAll('.markdown-body, .js-comment-body');
+    if (!this.isGitHubPage()) return;
+
+    const markdownElements = this.detectMarkdownElements();
     
     markdownElements.forEach((element) => {
       this.addEnhancementButtons(element as HTMLElement);
@@ -55,7 +57,7 @@ class GitHubMarkdownEnhancer {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE) {
             const element = node as HTMLElement;
-            const markdownNodes = element.querySelectorAll('.markdown-body, .js-comment-body');
+            const markdownNodes = this.detectMarkdownElements(element);
             markdownNodes.forEach((mdElement) => {
               this.addEnhancementButtons(mdElement as HTMLElement);
             });
@@ -68,6 +70,45 @@ class GitHubMarkdownEnhancer {
       childList: true,
       subtree: true,
     });
+  }
+
+  private isGitHubPage(): boolean {
+    return window.location.hostname === 'github.com';
+  }
+
+  private detectMarkdownElements(container: HTMLElement | Document = document): HTMLElement[] {
+    const selectors = [
+      '.markdown-body',           // Main markdown content
+      '.js-comment-body',         // Comment bodies
+      '.markdown-body[data-type="markdown"]', // Specific markdown files
+      '.Box-body .markdown-body', // File content in boxes
+    ];
+
+    const elements: HTMLElement[] = [];
+    selectors.forEach(selector => {
+      const found = container.querySelectorAll(selector);
+      found.forEach(el => {
+        if (this.isValidMarkdownElement(el as HTMLElement)) {
+          elements.push(el as HTMLElement);
+        }
+      });
+    });
+
+    return elements;
+  }
+
+  private isValidMarkdownElement(element: HTMLElement): boolean {
+    // Check if element has meaningful content
+    const textContent = element.textContent?.trim();
+    if (!textContent || textContent.length < 10) return false;
+
+    // Check if it's on a GitHub file page or issue/PR page
+    const url = window.location.href;
+    const isFileView = url.includes('/blob/') || url.includes('/tree/');
+    const isIssueOrPR = url.includes('/issues/') || url.includes('/pull/');
+    const isWiki = url.includes('/wiki/');
+
+    return isFileView || isIssueOrPR || isWiki;
   }
 
   private addEnhancementButtons(element: HTMLElement): void {
