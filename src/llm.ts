@@ -1,7 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { BaseMessage } from "langchain/schema";
 
 export type LLMProvider = "openai" | "anthropic" | "google";
 
@@ -80,12 +79,7 @@ export class LLMWrapper {
     }
 
     try {
-      const response = await this.llm.call([
-        {
-          role: "user",
-          content: prompt,
-        } as BaseMessage,
-      ]);
+      const response = await this.llm.invoke([prompt]);
 
       if (!response || !response.content) {
         throw new Error('Empty response from LLM');

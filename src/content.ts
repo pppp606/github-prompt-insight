@@ -1,5 +1,5 @@
 import { LLMWrapper, LLMConfig } from './llm';
-import { sanitizeForLLM, preprocessForTranslation, preprocessForSummarization, isValidContent, getContentPreview } from './utils/textProcessor';
+import { sanitizeForLLM } from './utils/textProcessor';
 import { ExtensionConfig, storageManager } from './utils/storage';
 import { translateElement, getTranslationPreview, formatTranslationResult } from './utils/translate';
 import { summarizeElement, getSummaryPreview, formatSummaryResult, getOptimalSummaryLength } from './utils/summarize';
@@ -329,7 +329,7 @@ if (document.readyState === 'loading') {
   enhancer.initialize();
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
   if (request.action === 'toggle_sidebar') {
     console.log('Toggle sidebar requested');
   }
