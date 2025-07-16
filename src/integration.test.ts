@@ -8,7 +8,7 @@ import { summarizeElement } from './utils/summarize';
 // Mock LangChain dependencies
 vi.mock('@langchain/openai', () => ({
   ChatOpenAI: vi.fn().mockImplementation(() => ({
-    call: vi.fn(),
+    invoke: vi.fn(),
   })),
 }));
 
@@ -59,11 +59,11 @@ describe('Integration Tests', () => {
       
       // Mock LLM response for translation
       const { ChatOpenAI } = await import('@langchain/openai');
-      const mockCall = vi.fn().mockResolvedValue({
+      const mockInvoke = vi.fn().mockResolvedValue({
         content: 'はじめに\nこれは、当社のアプリケーションを始めるための包括的なガイドです。\nインストール後、APIキーを設定すれば準備完了です！',
         usage: mockLLMResponse.usage,
       });
-      (ChatOpenAI as Mock).mockImplementation(() => ({ call: mockCall }));
+      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
 
       // Create LLM wrapper
       const config = {
@@ -80,10 +80,10 @@ describe('Integration Tests', () => {
       expect(result.content).toContain('はじめに');
       expect(result.content).toContain('アプリケーション');
       expect(result.provider).toBe('openai');
-      expect(mockCall).toHaveBeenCalled();
+      expect(mockInvoke).toHaveBeenCalled();
 
       // Verify that code blocks were excluded from translation
-      const callArguments = mockCall.mock.calls[0][0];
+      const callArguments = mockInvoke.mock.calls[0][0];
       expect(callArguments[0].content).not.toContain('npm install');
     });
 
@@ -98,8 +98,8 @@ describe('Integration Tests', () => {
       
       // Mock LLM error
       const { ChatOpenAI } = await import('@langchain/openai');
-      const mockCall = vi.fn().mockRejectedValue(new Error('Rate limit exceeded'));
-      (ChatOpenAI as Mock).mockImplementation(() => ({ call: mockCall }));
+      const mockInvoke = vi.fn().mockRejectedValue(new Error('Rate limit exceeded'));
+      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
 
       const config = {
         provider: 'openai' as const,
@@ -134,11 +134,11 @@ predictions = model.predict(X_test)
       
       // Mock LLM response for summarization
       const { ChatOpenAI } = await import('@langchain/openai');
-      const mockCall = vi.fn().mockResolvedValue({
+      const mockInvoke = vi.fn().mockResolvedValue({
         content: 'Machine learning is an AI subset that enables computers to learn from data through supervised, unsupervised, and reinforcement learning methods. Applications include image recognition, NLP, recommendation systems, and autonomous vehicles.',
         usage: mockLLMResponse.usage,
       });
-      (ChatOpenAI as Mock).mockImplementation(() => ({ call: mockCall }));
+      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
 
       // Create LLM wrapper
       const config = {
@@ -155,10 +155,10 @@ predictions = model.predict(X_test)
       expect(result.content).toContain('supervised');
       expect(result.content).toContain('applications');
       expect(result.provider).toBe('openai');
-      expect(mockCall).toHaveBeenCalled();
+      expect(mockInvoke).toHaveBeenCalled();
 
       // Verify that code blocks were excluded
-      const callArguments = mockCall.mock.calls[0][0];
+      const callArguments = mockInvoke.mock.calls[0][0];
       expect(callArguments[0].content).not.toContain('LinearRegression');
       expect(callArguments[0].content).not.toContain('model.fit');
     });
@@ -174,8 +174,8 @@ predictions = model.predict(X_test)
       
       // Mock LLM error
       const { ChatOpenAI } = await import('@langchain/openai');
-      const mockCall = vi.fn().mockRejectedValue(new Error('Service unavailable'));
-      (ChatOpenAI as Mock).mockImplementation(() => ({ call: mockCall }));
+      const mockInvoke = vi.fn().mockRejectedValue(new Error('Service unavailable'));
+      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
 
       const config = {
         provider: 'openai' as const,
@@ -386,8 +386,8 @@ import { APIClient } from '@api/client';
       ];
 
       for (const errorMessage of errorScenarios) {
-        const mockCall = vi.fn().mockRejectedValue(new Error(errorMessage));
-        (ChatOpenAI as Mock).mockImplementation(() => ({ call: mockCall }));
+        const mockInvoke = vi.fn().mockRejectedValue(new Error(errorMessage));
+        (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
 
         await expect(llmWrapper.generateResponse('test')).rejects.toThrow();
       }
@@ -405,8 +405,8 @@ import { APIClient } from '@api/client';
 
       // Mock successful response
       const { ChatOpenAI } = await import('@langchain/openai');
-      const mockCall = vi.fn().mockResolvedValue(mockLLMResponse);
-      (ChatOpenAI as Mock).mockImplementation(() => ({ call: mockCall }));
+      const mockInvoke = vi.fn().mockResolvedValue(mockLLMResponse);
+      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
 
       const startTime = Date.now();
       
@@ -447,11 +447,11 @@ import { APIClient } from '@api/client';
 
       // Mock failure then success
       const { ChatOpenAI } = await import('@langchain/openai');
-      const mockCall = vi.fn()
+      const mockInvoke = vi.fn()
         .mockRejectedValueOnce(new Error('Temporary failure'))
         .mockResolvedValueOnce(mockLLMResponse);
       
-      (ChatOpenAI as Mock).mockImplementation(() => ({ call: mockCall }));
+      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
 
       // First request should fail
       await expect(llmWrapper.generateResponse('test')).rejects.toThrow('Temporary failure');
@@ -480,8 +480,8 @@ import { APIClient } from '@api/client';
       for (const { input, mockError, expectedError } of errorTests) {
         if (mockError) {
           const { ChatOpenAI } = await import('@langchain/openai');
-          const mockCall = vi.fn().mockRejectedValue(new Error(mockError));
-          (ChatOpenAI as Mock).mockImplementation(() => ({ call: mockCall }));
+          const mockInvoke = vi.fn().mockRejectedValue(new Error(mockError));
+          (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
         }
 
         await expect(llmWrapper.generateResponse(input)).rejects.toThrow(expectedError);
