@@ -27,6 +27,8 @@ export interface LLMResponse {
 export class LLMWrapper {
   private config: LLMConfig;
   private llm: ChatOpenAI | ChatAnthropic | ChatGoogleGenerativeAI;
+  private lastRequestTime: number = 0;
+  private minRequestInterval: number = 1000; // 1 second between requests
 
   constructor(config: LLMConfig) {
     this.config = config;
@@ -65,6 +67,18 @@ export class LLMWrapper {
   }
 
   async generateResponse(prompt: string): Promise<LLMResponse> {
+    // Rate limiting
+    await this.enforceRateLimit();
+    
+    // Input validation
+    if (!prompt || prompt.trim().length === 0) {
+      throw new Error('Prompt cannot be empty');
+    }
+
+    if (prompt.length > 50000) {
+      throw new Error('Prompt is too long (max 50,000 characters)');
+    }
+
     try {
       const response = await this.llm.call([
         {
@@ -73,6 +87,10 @@ export class LLMWrapper {
         } as BaseMessage,
       ]);
 
+      if (!response || !response.content) {
+        throw new Error('Empty response from LLM');
+      }
+
       return {
         content: response.content as string,
         provider: this.config.provider,
@@ -80,11 +98,44 @@ export class LLMWrapper {
         usage: this.extractUsage(response),
       };
     } catch (error) {
-      throw new Error(`LLM generation failed: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof Error) {
+        // Handle specific API errors
+        if (error.message.includes('rate limit')) {
+          throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+        }
+        if (error.message.includes('API key')) {
+          throw new Error('Invalid API key. Please check your configuration.');
+        }
+        if (error.message.includes('quota')) {
+          throw new Error('API quota exceeded. Please check your billing.');
+        }
+        throw new Error(`LLM generation failed: ${error.message}`);
+      }
+      throw new Error(`LLM generation failed: ${String(error)}`);
     }
   }
 
+  private async enforceRateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      const waitTime = this.minRequestInterval - timeSinceLastRequest;
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    this.lastRequestTime = Date.now();
+  }
+
   async translateText(text: string, targetLanguage: string): Promise<LLMResponse> {
+    if (!text || text.trim().length === 0) {
+      throw new Error('Text to translate cannot be empty');
+    }
+    
+    if (!targetLanguage || targetLanguage.trim().length === 0) {
+      throw new Error('Target language must be specified');
+    }
+
     const prompt = `Translate the following text to ${targetLanguage}. Only return the translated text without any additional explanation or formatting:
 
 ${text}`;
@@ -92,7 +143,15 @@ ${text}`;
     return this.generateResponse(prompt);
   }
 
-  async summarizeText(text: string, maxSentences: number = 3): Promise<LLMResponse> {
+  async summarizeText(text: string, maxSentences: number = 2): Promise<LLMResponse> {
+    if (!text || text.trim().length === 0) {
+      throw new Error('Text to summarize cannot be empty');
+    }
+
+    if (maxSentences < 1 || maxSentences > 10) {
+      throw new Error('Number of sentences must be between 1 and 10');
+    }
+
     const prompt = `Summarize the following text in ${maxSentences} sentences or less. Be concise and capture the main points:
 
 ${text}`;

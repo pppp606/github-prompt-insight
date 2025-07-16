@@ -1,11 +1,8 @@
 import { LLMWrapper, LLMConfig } from './llm';
-
-interface ExtensionConfig {
-  llmProvider: 'openai' | 'anthropic' | 'google';
-  apiKey: string;
-  model?: string;
-  defaultLanguage: string;
-}
+import { sanitizeForLLM, preprocessForTranslation, preprocessForSummarization, isValidContent, getContentPreview } from './utils/textProcessor';
+import { ExtensionConfig, storageManager } from './utils/storage';
+import { translateElement, getTranslationPreview, formatTranslationResult } from './utils/translate';
+import { summarizeElement, getSummaryPreview, formatSummaryResult, getOptimalSummaryLength } from './utils/summarize';
 
 class GitHubMarkdownEnhancer {
   private config: ExtensionConfig | null = null;
@@ -33,18 +30,18 @@ class GitHubMarkdownEnhancer {
   }
 
   private async loadConfig(): Promise<ExtensionConfig | null> {
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { action: 'get_storage', key: 'extensionConfig' },
-        (response) => {
-          resolve(response.extensionConfig || null);
-        }
-      );
-    });
+    try {
+      return await storageManager.getConfigViaRuntime();
+    } catch (error) {
+      console.error('Failed to load configuration:', error);
+      return null;
+    }
   }
 
   private setupUI(): void {
-    const markdownElements = document.querySelectorAll('.markdown-body, .js-comment-body');
+    if (!this.isGitHubPage()) return;
+
+    const markdownElements = this.detectMarkdownElements();
     
     markdownElements.forEach((element) => {
       this.addEnhancementButtons(element as HTMLElement);
@@ -55,7 +52,7 @@ class GitHubMarkdownEnhancer {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE) {
             const element = node as HTMLElement;
-            const markdownNodes = element.querySelectorAll('.markdown-body, .js-comment-body');
+            const markdownNodes = this.detectMarkdownElements(element);
             markdownNodes.forEach((mdElement) => {
               this.addEnhancementButtons(mdElement as HTMLElement);
             });
@@ -70,6 +67,45 @@ class GitHubMarkdownEnhancer {
     });
   }
 
+  private isGitHubPage(): boolean {
+    return window.location.hostname === 'github.com';
+  }
+
+  private detectMarkdownElements(container: HTMLElement | Document = document): HTMLElement[] {
+    const selectors = [
+      '.markdown-body',           // Main markdown content
+      '.js-comment-body',         // Comment bodies
+      '.markdown-body[data-type="markdown"]', // Specific markdown files
+      '.Box-body .markdown-body', // File content in boxes
+    ];
+
+    const elements: HTMLElement[] = [];
+    selectors.forEach(selector => {
+      const found = container.querySelectorAll(selector);
+      found.forEach(el => {
+        if (this.isValidMarkdownElement(el as HTMLElement)) {
+          elements.push(el as HTMLElement);
+        }
+      });
+    });
+
+    return elements;
+  }
+
+  private isValidMarkdownElement(element: HTMLElement): boolean {
+    // Check if element has meaningful content
+    const textContent = element.textContent?.trim();
+    if (!textContent || textContent.length < 10) return false;
+
+    // Check if it's on a GitHub file page or issue/PR page
+    const url = window.location.href;
+    const isFileView = url.includes('/blob/') || url.includes('/tree/');
+    const isIssueOrPR = url.includes('/issues/') || url.includes('/pull/');
+    const isWiki = url.includes('/wiki/');
+
+    return isFileView || isIssueOrPR || isWiki;
+  }
+
   private addEnhancementButtons(element: HTMLElement): void {
     if (element.querySelector('.github-prompt-insight-buttons')) return;
 
@@ -82,6 +118,10 @@ class GitHubMarkdownEnhancer {
       display: flex;
       gap: 4px;
       z-index: 1000;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 6px;
+      padding: 2px;
+      backdrop-filter: blur(3px);
     `;
 
     const translateButton = this.createButton('🌐', 'Translate', () => {
@@ -95,8 +135,20 @@ class GitHubMarkdownEnhancer {
     buttonContainer.appendChild(translateButton);
     buttonContainer.appendChild(summarizeButton);
 
-    element.style.position = 'relative';
+    // Ensure the parent element can contain absolutely positioned children
+    const currentPosition = window.getComputedStyle(element).position;
+    if (currentPosition === 'static') {
+      element.style.position = 'relative';
+    }
+    
     element.appendChild(buttonContainer);
+
+    // Add fade-in animation
+    buttonContainer.style.opacity = '0';
+    buttonContainer.style.transition = 'opacity 0.3s ease-in-out';
+    setTimeout(() => {
+      buttonContainer.style.opacity = '1';
+    }, 10);
   }
 
   private createButton(icon: string, title: string, onclick: () => void): HTMLButtonElement {
@@ -134,13 +186,24 @@ class GitHubMarkdownEnhancer {
       return;
     }
 
-    const text = element.textContent || '';
     const targetLanguage = this.config?.defaultLanguage || 'Japanese';
+    const rawText = sanitizeForLLM(element);
+    const preview = getTranslationPreview(rawText, 60);
     
     try {
-      this.showLoading(element, 'Translating...');
-      const response = await this.llmWrapper.translateText(text, targetLanguage);
-      this.showResult(element, response.content, 'Translation');
+      this.showLoading(element, `Translating to ${targetLanguage}: "${preview}"...`);
+      
+      const response = await translateElement(element, targetLanguage, this.llmWrapper);
+      
+      // Format the result for better presentation
+      const formattedResult = formatTranslationResult(
+        rawText,
+        response.content,
+        targetLanguage,
+        response.provider
+      );
+      
+      this.showResult(element, formattedResult, `Translation to ${targetLanguage}`);
     } catch (error) {
       this.showError(`Translation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -152,12 +215,25 @@ class GitHubMarkdownEnhancer {
       return;
     }
 
-    const text = element.textContent || '';
+    const rawText = sanitizeForLLM(element);
+    const preview = getSummaryPreview(rawText, 60);
+    
+    // Determine optimal summary length based on content
+    const optimalLength = getOptimalSummaryLength(rawText, 'documentation');
     
     try {
-      this.showLoading(element, 'Summarizing...');
-      const response = await this.llmWrapper.summarizeText(text);
-      this.showResult(element, response.content, 'Summary');
+      this.showLoading(element, `Summarizing: "${preview}"...`);
+      
+      const response = await summarizeElement(element, this.llmWrapper, optimalLength);
+      
+      // Format the result for better presentation
+      const formattedResult = formatSummaryResult(
+        rawText,
+        response.content,
+        response.provider
+      );
+      
+      this.showResult(element, formattedResult, `Summary (${optimalLength} sentence${optimalLength > 1 ? 's' : ''})`);
     } catch (error) {
       this.showError(`Summarization failed: ${error instanceof Error ? error.message : String(error)}`);
     }

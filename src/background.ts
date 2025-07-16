@@ -11,14 +11,22 @@ chrome.action.onClicked.addListener((tab) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'get_storage') {
     chrome.storage.sync.get(request.key, (result) => {
-      sendResponse(result);
+      if (chrome.runtime.lastError) {
+        sendResponse({ error: chrome.runtime.lastError.message });
+      } else {
+        sendResponse(result);
+      }
     });
     return true;
   }
   
   if (request.action === 'set_storage') {
     chrome.storage.sync.set({ [request.key]: request.value }, () => {
-      sendResponse({ success: true });
+      if (chrome.runtime.lastError) {
+        sendResponse({ success: false, error: chrome.runtime.lastError.message });
+      } else {
+        sendResponse({ success: true });
+      }
     });
     return true;
   }
