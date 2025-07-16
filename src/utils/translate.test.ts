@@ -237,7 +237,6 @@ console.log("This should be removed");
 Another paragraph with \`inline code\`.
       `;
 
-      const expectedProcessed = 'Hello World\n\nThis is a paragraph with bold text.\n\nAnother paragraph with .';
       
       const mockResponse = {
         content: 'こんにちは世界\n\nこれは太字のテキストを含む段落です。\n\n別の段落。',

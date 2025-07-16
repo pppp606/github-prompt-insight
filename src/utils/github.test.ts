@@ -226,7 +226,7 @@ describe('GitHub Utilities', () => {
         },
       ];
 
-      pageTypes.forEach(({ url, isFile, isMarkdown, contentType }) => {
+      pageTypes.forEach(({ url, isMarkdown, contentType }) => {
         expect(isValidGitHubUrl(url)).toBe(true);
         expect(isMarkdownFile(url)).toBe(isMarkdown);
         expect(getContentType(url)).toBe(contentType);

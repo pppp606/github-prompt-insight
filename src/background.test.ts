@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock Chrome APIs before importing the module
 const mockSendMessage = vi.fn();
-const mockAddListener = vi.fn();
 const mockOnInstalledAddListener = vi.fn();
 const mockOnClickedAddListener = vi.fn();
 const mockOnMessageAddListener = vi.fn();
@@ -136,7 +135,7 @@ describe('Background Script', () => {
         const mockResult = { testKey: 'testValue' };
 
         // Setup storage mock to call callback
-        mockStorageGet.mockImplementation((key, callback) => {
+        mockStorageGet.mockImplementation((_key, callback) => {
           callback(mockResult);
         });
 
@@ -153,7 +152,7 @@ describe('Background Script', () => {
         const mockSendResponse = vi.fn();
 
         // Setup storage mock with error
-        mockStorageGet.mockImplementation((key, callback) => {
+        mockStorageGet.mockImplementation((_key, callback) => {
           global.chrome.runtime.lastError = { message: 'Storage error' };
           callback({});
         });
@@ -172,7 +171,7 @@ describe('Background Script', () => {
         const mockSendResponse = vi.fn();
 
         // Setup storage mock to call callback
-        mockStorageSet.mockImplementation((data, callback) => {
+        mockStorageSet.mockImplementation((_data, callback) => {
           callback();
         });
 
@@ -189,7 +188,7 @@ describe('Background Script', () => {
         const mockSendResponse = vi.fn();
 
         // Setup storage mock with error
-        mockStorageSet.mockImplementation((data, callback) => {
+        mockStorageSet.mockImplementation((_data, callback) => {
           global.chrome.runtime.lastError = { message: 'Storage error' };
           callback();
         });
@@ -222,7 +221,7 @@ describe('Background Script', () => {
       const mockSender = { tab: { id: 123 } };
       const mockSendResponse = vi.fn();
 
-      mockStorageGet.mockImplementation((key, callback) => {
+      mockStorageGet.mockImplementation((_key, callback) => {
         callback({ test: 'value' });
       });
 

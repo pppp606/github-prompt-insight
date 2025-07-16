@@ -1,23 +1,17 @@
-import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LLMWrapper, LLMConfig, LLMProvider, createLLMWrapper } from './llm';
 
 // Mock the LangChain modules
 vi.mock('@langchain/openai', () => ({
-  ChatOpenAI: vi.fn().mockImplementation(() => ({
-    invoke: vi.fn(),
-  })),
+  ChatOpenAI: vi.fn(),
 }));
 
 vi.mock('@langchain/anthropic', () => ({
-  ChatAnthropic: vi.fn().mockImplementation(() => ({
-    invoke: vi.fn(),
-  })),
+  ChatAnthropic: vi.fn(),
 }));
 
 vi.mock('@langchain/google-genai', () => ({
-  ChatGoogleGenerativeAI: vi.fn().mockImplementation(() => ({
-    invoke: vi.fn(),
-  })),
+  ChatGoogleGenerativeAI: vi.fn(),
 }));
 
 describe('LLM Integration', () => {
@@ -100,7 +94,7 @@ describe('LLM Integration', () => {
     it('should generate response with OpenAI', async () => {
       const { ChatOpenAI } = await import('@langchain/openai');
       const mockInvoke = vi.fn().mockResolvedValue(mockLLMResponse);
-      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
 
       const config: LLMConfig = {
         provider: 'openai',
@@ -127,7 +121,7 @@ describe('LLM Integration', () => {
     it('should generate response with Anthropic', async () => {
       const { ChatAnthropic } = await import('@langchain/anthropic');
       const mockInvoke = vi.fn().mockResolvedValue(mockLLMResponse);
-      (ChatAnthropic as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatAnthropic).mockReturnValue({ invoke: mockInvoke } as any);
 
       const config: LLMConfig = {
         provider: 'anthropic',
@@ -145,7 +139,7 @@ describe('LLM Integration', () => {
     it('should generate response with Google', async () => {
       const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai');
       const mockInvoke = vi.fn().mockResolvedValue(mockLLMResponse);
-      (ChatGoogleGenerativeAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatGoogleGenerativeAI).mockReturnValue({ invoke: mockInvoke } as any);
 
       const config: LLMConfig = {
         provider: 'google',
@@ -162,7 +156,7 @@ describe('LLM Integration', () => {
     it('should handle LLM call errors gracefully', async () => {
       const { ChatOpenAI } = await import('@langchain/openai');
       const mockInvoke = vi.fn().mockRejectedValue(new Error('API call failed'));
-      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
 
       const config: LLMConfig = {
         provider: 'openai',
@@ -178,7 +172,7 @@ describe('LLM Integration', () => {
       const { ChatOpenAI } = await import('@langchain/openai');
       const responseWithoutUsage = { content: 'Test response' };
       const mockInvoke = vi.fn().mockResolvedValue(responseWithoutUsage);
-      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
 
       const config: LLMConfig = {
         provider: 'openai',
@@ -197,7 +191,7 @@ describe('LLM Integration', () => {
     it('should create correct translation prompt', async () => {
       const { ChatOpenAI } = await import('@langchain/openai');
       const mockInvoke = vi.fn().mockResolvedValue({ content: 'こんにちは世界' });
-      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
 
       const config: LLMConfig = {
         provider: 'openai',
@@ -220,7 +214,7 @@ Hello world`;
         content: 'Bonjour le monde',
         usage: mockLLMResponse.usage,
       });
-      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
 
       const config: LLMConfig = {
         provider: 'openai',
@@ -237,7 +231,7 @@ Hello world`;
     it('should handle translation errors', async () => {
       const { ChatOpenAI } = await import('@langchain/openai');
       const mockInvoke = vi.fn().mockRejectedValue(new Error('Translation failed'));
-      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
 
       const config: LLMConfig = {
         provider: 'openai',
@@ -254,7 +248,7 @@ Hello world`;
     it('should create correct summarization prompt with default sentences', async () => {
       const { ChatOpenAI } = await import('@langchain/openai');
       const mockInvoke = vi.fn().mockResolvedValue({ content: 'Summary of the text.' });
-      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
 
       const config: LLMConfig = {
         provider: 'openai',
@@ -275,7 +269,7 @@ ${longText}`;
     it('should create correct summarization prompt with custom sentence count', async () => {
       const { ChatOpenAI } = await import('@langchain/openai');
       const mockInvoke = vi.fn().mockResolvedValue({ content: 'Brief summary.' });
-      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
 
       const config: LLMConfig = {
         provider: 'openai',
@@ -299,7 +293,7 @@ ${longText}`;
         content: 'This is a concise summary of the original text.',
         usage: mockLLMResponse.usage,
       });
-      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
 
       const config: LLMConfig = {
         provider: 'openai',
@@ -364,7 +358,7 @@ ${longText}`;
     it('should return correct default model names for each provider', async () => {
       const { ChatOpenAI } = await import('@langchain/openai');
       const mockInvoke = vi.fn().mockResolvedValue(mockLLMResponse);
-      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
 
       const configs = [
         { provider: 'openai' as LLMProvider, expectedModel: 'gpt-3.5-turbo' },
@@ -387,7 +381,7 @@ ${longText}`;
     it('should use custom model when specified', async () => {
       const { ChatOpenAI } = await import('@langchain/openai');
       const mockInvoke = vi.fn().mockResolvedValue(mockLLMResponse);
-      (ChatOpenAI as Mock).mockImplementation(() => ({ invoke: mockInvoke }));
+      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
 
       const config: LLMConfig = {
         provider: 'openai',

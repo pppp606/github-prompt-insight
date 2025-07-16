@@ -35,8 +35,8 @@ describe('Storage Management', () => {
         defaultLanguage: 'Japanese',
       };
 
-      mockChromeStorage.sync.get.mockImplementation((key, callback) => {
-        callback({ [key]: mockConfig });
+      mockChromeStorage.sync.get.mockImplementation((_key, callback) => {
+        callback({ [_key]: mockConfig });
       });
 
       const storage = new StorageManager();
@@ -47,7 +47,7 @@ describe('Storage Management', () => {
     });
 
     it('should return null when no configuration exists', async () => {
-      mockChromeStorage.sync.get.mockImplementation((key, callback) => {
+      mockChromeStorage.sync.get.mockImplementation((_key, callback) => {
         callback({});
       });
 
@@ -65,7 +65,7 @@ describe('Storage Management', () => {
         defaultLanguage: 'Spanish',
       };
 
-      mockChromeStorage.sync.set.mockImplementation((data, callback) => {
+      mockChromeStorage.sync.set.mockImplementation((_data, callback) => {
         callback();
       });
 
@@ -91,11 +91,11 @@ describe('Storage Management', () => {
         model: 'gpt-4',
       };
 
-      mockChromeStorage.sync.get.mockImplementation((key, callback) => {
-        callback({ [key]: existingConfig });
+      mockChromeStorage.sync.get.mockImplementation((_key, callback) => {
+        callback({ [_key]: existingConfig });
       });
 
-      mockChromeStorage.sync.set.mockImplementation((data, callback) => {
+      mockChromeStorage.sync.set.mockImplementation((_data, callback) => {
         callback();
       });
 
@@ -119,11 +119,11 @@ describe('Storage Management', () => {
         apiKey: 'new-key',
       };
 
-      mockChromeStorage.sync.get.mockImplementation((key, callback) => {
+      mockChromeStorage.sync.get.mockImplementation((_key, callback) => {
         callback({});
       });
 
-      mockChromeStorage.sync.set.mockImplementation((data, callback) => {
+      mockChromeStorage.sync.set.mockImplementation((_data, callback) => {
         callback();
       });
 
@@ -137,7 +137,7 @@ describe('Storage Management', () => {
     });
 
     it('should clear configuration from storage', async () => {
-      mockChromeStorage.sync.remove.mockImplementation((key, callback) => {
+      mockChromeStorage.sync.remove.mockImplementation((_key, callback) => {
         callback();
       });
 
@@ -162,7 +162,7 @@ describe('Storage Management', () => {
     });
 
     it('should handle storage errors gracefully', async () => {
-      mockChromeStorage.sync.get.mockImplementation((key, callback) => {
+      mockChromeStorage.sync.get.mockImplementation(() => {
         // Simulate storage error
         throw new Error('Storage access denied');
       });
@@ -179,8 +179,8 @@ describe('Storage Management', () => {
         defaultLanguage: 'English',
       };
 
-      mockChromeStorage.sync.get.mockImplementation((key, callback) => {
-        callback({ [key]: config });
+      mockChromeStorage.sync.get.mockImplementation((_key, callback) => {
+        callback({ [_key]: config });
       });
 
       const storage = new StorageManager();
@@ -190,7 +190,7 @@ describe('Storage Management', () => {
     });
 
     it('should return null when no API key is stored', async () => {
-      mockChromeStorage.sync.get.mockImplementation((key, callback) => {
+      mockChromeStorage.sync.get.mockImplementation((_key, callback) => {
         callback({});
       });
 
@@ -209,8 +209,8 @@ describe('Storage Management', () => {
         defaultLanguage: 'French',
       };
 
-      mockChromeStorage.sync.get.mockImplementation((key, callback) => {
-        callback({ [key]: mockConfig });
+      mockChromeStorage.sync.get.mockImplementation((_key, callback) => {
+        callback({ [_key]: mockConfig });
       });
 
       const result = await getConfig();
@@ -224,7 +224,7 @@ describe('Storage Management', () => {
         defaultLanguage: 'German',
       };
 
-      mockChromeStorage.sync.set.mockImplementation((data, callback) => {
+      mockChromeStorage.sync.set.mockImplementation((_data, callback) => {
         callback();
       });
 
@@ -237,7 +237,7 @@ describe('Storage Management', () => {
     });
 
     it('should clear config using helper function', async () => {
-      mockChromeStorage.sync.remove.mockImplementation((key, callback) => {
+      mockChromeStorage.sync.remove.mockImplementation((_key, callback) => {
         callback();
       });
 
@@ -343,7 +343,7 @@ describe('Storage Management', () => {
       });
 
       const storage = new StorageManager();
-      const result = await storage.getConfigViaRuntime();
+      await storage.getConfigViaRuntime();
 
       expect(mockSendMessage).toHaveBeenCalledWith(
         { action: 'get_storage', key: 'extensionConfig' },
@@ -353,7 +353,7 @@ describe('Storage Management', () => {
 
     it('should handle runtime message errors', async () => {
       const mockSendMessage = chrome.runtime.sendMessage as Mock;
-      mockSendMessage.mockImplementation((message, callback) => {
+      mockSendMessage.mockImplementation((_message, callback) => {
         // Simulate error
         callback(null);
       });
