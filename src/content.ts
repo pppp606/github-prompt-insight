@@ -250,13 +250,13 @@ class GitHubMarkdownEnhancer {
       border: 1px solid #d1d5da;
       border-radius: 6px;
       padding: 12px;
-      margin-top: 12px;
+      margin-bottom: 12px;
       font-size: 14px;
       color: #586069;
     `;
     loadingDiv.textContent = message;
     
-    element.appendChild(loadingDiv);
+    element.insertBefore(loadingDiv, element.firstChild);
   }
 
   private showResult(element: HTMLElement, content: string, type: string): void {
@@ -270,7 +270,7 @@ class GitHubMarkdownEnhancer {
       border: 1px solid #d1d5da;
       border-radius: 6px;
       padding: 12px;
-      margin-top: 12px;
+      margin-bottom: 12px;
       font-size: 14px;
       line-height: 1.5;
     `;
@@ -294,7 +294,7 @@ class GitHubMarkdownEnhancer {
 
     resultDiv.appendChild(header);
     resultDiv.appendChild(contentDiv);
-    element.appendChild(resultDiv);
+    element.insertBefore(resultDiv, element.firstChild);
   }
 
   private showError(message: string): void {
