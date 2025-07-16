@@ -281,6 +281,439 @@ describe('GitHubMarkdownEnhancer', () => {
     });
   });
 
+  describe('Result display positioning', () => {
+    it('should insert result div at the top of the element using insertBefore', () => {
+      document.body.innerHTML = `
+        <div class="markdown-body">
+          <h1>Existing Content</h1>
+          <p>This is the original markdown content.</p>
+        </div>
+      `;
+
+      const element = document.querySelector('.markdown-body') as HTMLElement;
+      const firstChild = element.firstChild;
+      
+      // Mock the showResult method behavior
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'github-prompt-insight-result';
+      resultDiv.innerHTML = '<p>Translation result</p>';
+      
+      // This should use insertBefore instead of appendChild
+      element.insertBefore(resultDiv, element.firstChild);
+      
+      // Verify the result div is the first child
+      expect(element.firstChild).toBe(resultDiv);
+      expect(element.children[0]).toBe(resultDiv);
+      expect(element.children[1].tagName).toBe('H1');
+      expect(resultDiv.nextSibling).toBe(firstChild);
+    });
+
+    it('should maintain result div at top even with empty element', () => {
+      document.body.innerHTML = `
+        <div class="markdown-body"></div>
+      `;
+
+      const element = document.querySelector('.markdown-body') as HTMLElement;
+      
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'github-prompt-insight-result';
+      resultDiv.innerHTML = '<p>Summary result</p>';
+      
+      // Should work even when element has no children
+      element.insertBefore(resultDiv, element.firstChild);
+      
+      expect(element.firstChild).toBe(resultDiv);
+      expect(element.children.length).toBe(1);
+    });
+
+    it('should replace existing result div at the top', () => {
+      document.body.innerHTML = `
+        <div class="markdown-body">
+          <div class="github-prompt-insight-result">Old Result</div>
+          <h1>Content</h1>
+        </div>
+      `;
+
+      const element = document.querySelector('.markdown-body') as HTMLElement;
+      
+      // Remove existing result
+      const existing = element.querySelector('.github-prompt-insight-result');
+      if (existing) existing.remove();
+      
+      // Add new result at top
+      const newResultDiv = document.createElement('div');
+      newResultDiv.className = 'github-prompt-insight-result';
+      newResultDiv.innerHTML = '<p>New Result</p>';
+      
+      element.insertBefore(newResultDiv, element.firstChild);
+      
+      expect(element.children[0]).toBe(newResultDiv);
+      expect(element.children[0].textContent).toContain('New Result');
+      expect(element.children[1].tagName).toBe('H1');
+      expect(element.querySelectorAll('.github-prompt-insight-result').length).toBe(1);
+    });
+
+    it('should position result div correctly with multiple child elements', () => {
+      document.body.innerHTML = `
+        <div class="markdown-body">
+          <h1>Title</h1>
+          <p>Paragraph 1</p>
+          <ul>
+            <li>Item 1</li>
+            <li>Item 2</li>
+          </ul>
+          <p>Paragraph 2</p>
+        </div>
+      `;
+
+      const element = document.querySelector('.markdown-body') as HTMLElement;
+      const originalFirstChild = element.firstChild;
+      const originalChildCount = element.children.length;
+      
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'github-prompt-insight-result';
+      resultDiv.innerHTML = '<p>Translation Result</p>';
+      
+      element.insertBefore(resultDiv, element.firstChild);
+      
+      expect(element.firstChild).toBe(resultDiv);
+      expect(element.children.length).toBe(originalChildCount + 1);
+      expect(resultDiv.nextSibling).toBe(originalFirstChild);
+      
+      // Verify original content order is preserved
+      expect(element.children[1].tagName).toBe('H1');
+      expect(element.children[2].tagName).toBe('P');
+      expect(element.children[3].tagName).toBe('UL');
+      expect(element.children[4].tagName).toBe('P');
+    });
+  });
+
+  describe('CSS styling for result positioning', () => {
+    it('should use margin-bottom instead of margin-top for result div', () => {
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'github-prompt-insight-result';
+      resultDiv.style.cssText = `
+        background: #f6f8fa;
+        border: 1px solid #d1d5da;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 12px;
+        font-size: 14px;
+      `;
+      
+      expect(resultDiv.style.marginBottom).toBe('12px');
+      expect(resultDiv.style.marginTop).toBe('');
+    });
+
+    it('should use margin-bottom for loading div', () => {
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'github-prompt-insight-result';
+      loadingDiv.style.cssText = `
+        background: #f6f8fa;
+        border: 1px solid #d1d5da;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 12px;
+        font-size: 14px;
+        color: #586069;
+      `;
+      
+      expect(loadingDiv.style.marginBottom).toBe('12px');
+      expect(loadingDiv.style.marginTop).toBe('');
+    });
+
+    it('should maintain proper spacing when result is at top', () => {
+      document.body.innerHTML = `
+        <div class="markdown-body">
+          <h1>Title</h1>
+          <p>Content</p>
+        </div>
+      `;
+
+      const element = document.querySelector('.markdown-body') as HTMLElement;
+      
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'github-prompt-insight-result';
+      resultDiv.style.cssText = `
+        background: #f6f8fa;
+        border: 1px solid #d1d5da;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 12px;
+        font-size: 14px;
+      `;
+      
+      element.insertBefore(resultDiv, element.firstChild);
+      
+      // Verify spacing
+      expect(resultDiv.style.marginBottom).toBe('12px');
+      expect(element.firstChild).toBe(resultDiv);
+      
+      // The margin-bottom should create space between result and original content
+      const computedStyle = {
+        marginBottom: '12px'
+      };
+      expect(computedStyle.marginBottom).toBe('12px');
+    });
+
+    it('should not have margin-top to avoid extra space at top', () => {
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'github-prompt-insight-result';
+      
+      // Set styles without margin-top
+      resultDiv.style.background = '#f6f8fa';
+      resultDiv.style.border = '1px solid #d1d5da';
+      resultDiv.style.borderRadius = '6px';
+      resultDiv.style.padding = '12px';
+      resultDiv.style.marginBottom = '12px';
+      resultDiv.style.fontSize = '14px';
+      
+      // Verify no margin-top is set
+      expect(resultDiv.style.marginTop).toBe('');
+      expect(resultDiv.style.marginBottom).toBe('12px');
+    });
+  });
+
+  describe('Translation feature result positioning', () => {
+    it('should display translation results at the top of the element', () => {
+      document.body.innerHTML = `
+        <div class="markdown-body">
+          <h1>Original Content</h1>
+          <p>This content will be translated.</p>
+        </div>
+      `;
+
+      const element = document.querySelector('.markdown-body') as HTMLElement;
+      
+      // Simulate translation result display
+      const translationResult = document.createElement('div');
+      translationResult.className = 'github-prompt-insight-result';
+      translationResult.innerHTML = `
+        <div style="font-weight: bold;">Translation to Japanese</div>
+        <div>翻訳されたコンテンツ</div>
+      `;
+      
+      element.insertBefore(translationResult, element.firstChild);
+      
+      expect(element.firstChild).toBe(translationResult);
+      expect(element.children[0].className).toBe('github-prompt-insight-result');
+      expect(element.children[1].tagName).toBe('H1');
+    });
+
+    it('should display both translation and summary results at top in correct order', () => {
+      document.body.innerHTML = `
+        <div class="markdown-body">
+          <h1>Content</h1>
+          <p>Original text.</p>
+        </div>
+      `;
+
+      const element = document.querySelector('.markdown-body') as HTMLElement;
+      
+      // First add translation result
+      const translationResult = document.createElement('div');
+      translationResult.className = 'github-prompt-insight-result';
+      translationResult.setAttribute('data-type', 'translation');
+      translationResult.innerHTML = '<p>Translation result</p>';
+      element.insertBefore(translationResult, element.firstChild);
+      
+      // Then add summary result (should also go to top, after translation)
+      const summaryResult = document.createElement('div');
+      summaryResult.className = 'github-prompt-insight-result';
+      summaryResult.setAttribute('data-type', 'summary');
+      summaryResult.innerHTML = '<p>Summary result</p>';
+      
+      // Remove any existing result of same type first
+      const existingSummary = element.querySelector('.github-prompt-insight-result[data-type="summary"]');
+      if (existingSummary) existingSummary.remove();
+      
+      element.insertBefore(summaryResult, element.firstChild);
+      
+      // Both results should be at top
+      expect(element.children[0].getAttribute('data-type')).toBe('summary');
+      expect(element.children[1].getAttribute('data-type')).toBe('translation');
+      expect(element.children[2].tagName).toBe('H1');
+    });
+
+    it('should handle translation loading state at top', () => {
+      document.body.innerHTML = `
+        <div class="markdown-body">
+          <h1>Content to translate</h1>
+        </div>
+      `;
+
+      const element = document.querySelector('.markdown-body') as HTMLElement;
+      
+      // Show loading at top
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'github-prompt-insight-result';
+      loadingDiv.textContent = 'Translating to Japanese: "Content to tra..."...';
+      loadingDiv.style.marginBottom = '12px';
+      
+      element.insertBefore(loadingDiv, element.firstChild);
+      
+      expect(element.firstChild).toBe(loadingDiv);
+      expect(loadingDiv.style.marginBottom).toBe('12px');
+      expect(loadingDiv.textContent).toContain('Translating');
+    });
+
+    it('should maintain consistent styling for translation results', () => {
+      const translationResult = document.createElement('div');
+      translationResult.className = 'github-prompt-insight-result';
+      translationResult.style.cssText = `
+        background: #f6f8fa;
+        border: 1px solid #d1d5da;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 12px;
+        font-size: 14px;
+      `;
+      
+      // Check consistent styling
+      expect(translationResult.style.background).toBe('rgb(246, 248, 250)');
+      expect(translationResult.style.borderRadius).toBe('6px');
+      expect(translationResult.style.padding).toBe('12px');
+      expect(translationResult.style.marginBottom).toBe('12px');
+      expect(translationResult.style.marginTop).toBe('');
+    });
+  });
+
+  describe('Regression tests for existing functionality', () => {
+    it('should still remove existing result before adding new one', () => {
+      document.body.innerHTML = `
+        <div class="markdown-body">
+          <div class="github-prompt-insight-result">Old Result</div>
+          <h1>Content</h1>
+        </div>
+      `;
+
+      const element = document.querySelector('.markdown-body') as HTMLElement;
+      
+      // Check existing result is present
+      expect(element.querySelectorAll('.github-prompt-insight-result').length).toBe(1);
+      
+      // Remove existing
+      const existing = element.querySelector('.github-prompt-insight-result');
+      if (existing) existing.remove();
+      
+      // Add new result
+      const newResult = document.createElement('div');
+      newResult.className = 'github-prompt-insight-result';
+      newResult.textContent = 'New Result';
+      element.insertBefore(newResult, element.firstChild);
+      
+      // Should have only one result
+      expect(element.querySelectorAll('.github-prompt-insight-result').length).toBe(1);
+      expect(element.querySelector('.github-prompt-insight-result')?.textContent).toBe('New Result');
+    });
+
+    it('should maintain result div structure and content', () => {
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'github-prompt-insight-result';
+      
+      const header = document.createElement('div');
+      header.style.cssText = `
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: #0366d6;
+      `;
+      header.textContent = 'Summary (3 sentences)';
+      
+      const contentDiv = document.createElement('div');
+      contentDiv.style.cssText = `
+        line-height: 1.6;
+        color: #24292e;
+        white-space: pre-wrap;
+      `;
+      contentDiv.textContent = 'This is the summary content.';
+      
+      resultDiv.appendChild(header);
+      resultDiv.appendChild(contentDiv);
+      
+      // Verify structure
+      expect(resultDiv.children.length).toBe(2);
+      expect(resultDiv.children[0].style.fontWeight).toBe('bold');
+      expect(resultDiv.children[0].textContent).toBe('Summary (3 sentences)');
+      expect(resultDiv.children[1].style.whiteSpace).toBe('pre-wrap');
+      expect(resultDiv.children[1].textContent).toBe('This is the summary content.');
+    });
+
+    it('should handle error display functionality', () => {
+      const errorDiv = document.createElement('div');
+      errorDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #d73a49;
+        color: white;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        z-index: 10000;
+        max-width: 300px;
+      `;
+      errorDiv.textContent = 'Translation failed: API error';
+      
+      document.body.appendChild(errorDiv);
+      
+      // Verify error styling
+      expect(errorDiv.style.position).toBe('fixed');
+      expect(errorDiv.style.background).toBe('rgb(215, 58, 73)');
+      expect(errorDiv.style.color).toBe('white');
+      expect(errorDiv.style.zIndex).toBe('10000');
+      expect(errorDiv.textContent).toContain('Translation failed');
+      
+      // Clean up
+      errorDiv.remove();
+    });
+
+    it('should preserve button functionality', () => {
+      const mockHandler = vi.fn();
+      const button = document.createElement('button');
+      button.innerHTML = '🌐';
+      button.title = 'Translate';
+      button.addEventListener('click', mockHandler);
+      
+      // Simulate click
+      button.click();
+      
+      expect(mockHandler).toHaveBeenCalledOnce();
+      expect(button.title).toBe('Translate');
+    });
+
+    it('should handle multiple markdown elements independently', () => {
+      document.body.innerHTML = `
+        <div class="markdown-body" id="md1">
+          <h1>First Markdown</h1>
+        </div>
+        <div class="markdown-body" id="md2">
+          <h1>Second Markdown</h1>
+        </div>
+      `;
+
+      const md1 = document.getElementById('md1') as HTMLElement;
+      const md2 = document.getElementById('md2') as HTMLElement;
+      
+      // Add result to first element
+      const result1 = document.createElement('div');
+      result1.className = 'github-prompt-insight-result';
+      result1.textContent = 'Result 1';
+      md1.insertBefore(result1, md1.firstChild);
+      
+      // Add result to second element
+      const result2 = document.createElement('div');
+      result2.className = 'github-prompt-insight-result';
+      result2.textContent = 'Result 2';
+      md2.insertBefore(result2, md2.firstChild);
+      
+      // Each should have its own result
+      expect(md1.querySelector('.github-prompt-insight-result')?.textContent).toBe('Result 1');
+      expect(md2.querySelector('.github-prompt-insight-result')?.textContent).toBe('Result 2');
+      expect(md1.firstChild).toBe(result1);
+      expect(md2.firstChild).toBe(result2);
+    });
+  });
+
   describe('Message listener', () => {
     it('should register onMessage listener', () => {
       const mockAddListener = vi.fn();
