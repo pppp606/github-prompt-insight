@@ -97,88 +97,124 @@ class GitHubMarkdownEnhancer {
     const textContent = element.textContent?.trim();
     if (!textContent || textContent.length < 10) return false;
 
-    // Check if it's on a GitHub file page or issue/PR page
+    // Only target blob pages as per requirement
     const url = window.location.href;
-    const isFileView = url.includes('/blob/') || url.includes('/tree/');
-    const isIssueOrPR = url.includes('/issues/') || url.includes('/pull/');
-    const isWiki = url.includes('/wiki/');
+    const isBlobView = url.includes('/blob/');
 
-    return isFileView || isIssueOrPR || isWiki;
+    return isBlobView;
   }
 
   private addEnhancementButtons(element: HTMLElement): void {
-    if (element.querySelector('.github-prompt-insight-buttons')) return;
+    // Check if we've already added buttons
+    if (document.querySelector('.github-prompt-insight-translate') || 
+        document.querySelector('.github-prompt-insight-summarize')) {
+      return;
+    }
 
-    const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'github-prompt-insight-buttons';
-    buttonContainer.style.cssText = `
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      display: flex;
-      gap: 4px;
-      z-index: 1000;
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 6px;
-      padding: 2px;
-      backdrop-filter: blur(3px);
-    `;
+    // Find the existing button group (usually contains Raw, Copy, Download)
+    const buttonGroup = this.findExistingButtonGroup();
+    
+    if (buttonGroup) {
+      // Integrate with existing button group
+      this.integrateWithButtonGroup(buttonGroup, element);
+    } else {
+      // Fallback: Create standalone buttons if no button group found
+      this.createStandaloneButtons(element);
+    }
+  }
 
-    const translateButton = this.createButton('🌐', 'Translate', () => {
+  private findExistingButtonGroup(): Element | null {
+    // Common selectors for GitHub's button groups on blob pages
+    const selectors = [
+      '.BtnGroup:has(a[href*="/raw/"])', // Button group containing Raw button
+      '.btn-group:has(a[href*="/raw/"])',
+      '.d-flex.gap-2:has(a[href*="/raw/"])',
+      '.react-blob-header-edit-and-raw-actions .BtnGroup',
+      '.Box-header .BtnGroup',
+      // Fallback: any button group near the file content
+      '.repository-content .BtnGroup',
+      '.file-navigation .BtnGroup'
+    ];
+
+    for (const selector of selectors) {
+      try {
+        const element = document.querySelector(selector);
+        if (element) {
+          return element;
+        }
+      } catch (e) {
+        // :has() might not be supported in all browsers, continue
+        continue;
+      }
+    }
+
+    // Alternative approach: Find Raw button and get its parent group
+    const rawButton = document.querySelector('a[href*="/raw/"]');
+    if (rawButton) {
+      let parent = rawButton.parentElement;
+      while (parent && parent !== document.body) {
+        if (parent.classList.contains('BtnGroup') || 
+            parent.classList.contains('btn-group') ||
+            parent.getAttribute('role') === 'group') {
+          return parent;
+        }
+        parent = parent.parentElement;
+      }
+    }
+
+    return null;
+  }
+
+  private integrateWithButtonGroup(buttonGroup: Element, markdownElement: HTMLElement): void {
+    const translateButton = this.createPrimerButton('Translate', 'github-prompt-insight-translate', () => {
+      this.translateElement(markdownElement);
+    });
+
+    const summarizeButton = this.createPrimerButton('Summarize', 'github-prompt-insight-summarize', () => {
+      this.summarizeElement(markdownElement);
+    });
+
+    // Insert buttons at the end of the button group
+    buttonGroup.appendChild(translateButton);
+    buttonGroup.appendChild(summarizeButton);
+  }
+
+  private createStandaloneButtons(element: HTMLElement): void {
+    // Fallback implementation when no button group is found
+    console.warn('GitHub Prompt Insight: No button group found, creating standalone buttons');
+    
+    const container = document.createElement('div');
+    container.className = 'github-prompt-insight-buttons d-flex gap-2 mb-3';
+    
+    const translateButton = this.createPrimerButton('Translate', 'github-prompt-insight-translate', () => {
       this.translateElement(element);
     });
 
-    const summarizeButton = this.createButton('📋', 'Summarize', () => {
+    const summarizeButton = this.createPrimerButton('Summarize', 'github-prompt-insight-summarize', () => {
       this.summarizeElement(element);
     });
 
-    buttonContainer.appendChild(translateButton);
-    buttonContainer.appendChild(summarizeButton);
+    container.appendChild(translateButton);
+    container.appendChild(summarizeButton);
 
-    // Ensure the parent element can contain absolutely positioned children
-    const currentPosition = window.getComputedStyle(element).position;
-    if (currentPosition === 'static') {
-      element.style.position = 'relative';
-    }
-    
-    element.appendChild(buttonContainer);
-
-    // Add fade-in animation
-    buttonContainer.style.opacity = '0';
-    buttonContainer.style.transition = 'opacity 0.3s ease-in-out';
-    setTimeout(() => {
-      buttonContainer.style.opacity = '1';
-    }, 10);
+    // Insert before the markdown content
+    element.parentElement?.insertBefore(container, element);
   }
 
-  private createButton(icon: string, title: string, onclick: () => void): HTMLButtonElement {
+  private createPrimerButton(text: string, className: string, onclick: () => void): HTMLButtonElement {
     const button = document.createElement('button');
-    button.innerHTML = icon;
-    button.title = title;
-    button.style.cssText = `
-      background: #24292e;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 4px 8px;
-      cursor: pointer;
-      font-size: 12px;
-      opacity: 0.8;
-      transition: opacity 0.2s;
-    `;
     
-    button.addEventListener('mouseenter', () => {
-      button.style.opacity = '1';
-    });
-    
-    button.addEventListener('mouseleave', () => {
-      button.style.opacity = '0.8';
-    });
+    // Use GitHub's Primer CSS classes
+    button.className = `btn btn-sm ${className}`;
+    button.type = 'button';
+    button.textContent = text;
     
     button.addEventListener('click', onclick);
     
     return button;
   }
+
+  // Removed createButton method - now using createPrimerButton instead
 
   private async translateElement(element: HTMLElement): Promise<void> {
     if (!this.llmWrapper) {
