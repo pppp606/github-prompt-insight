@@ -402,7 +402,7 @@ describe('Language Flow Integration Tests', () => {
       expect(defaultLanguage).toBe('English');
 
       // Clean up error state
-      global.chrome.runtime.lastError = null;
+      global.chrome.runtime.lastError = undefined;
     });
 
     it('should work with empty or corrupted storage data', async () => {
