@@ -69,3 +69,9 @@ To test the extension:
 - No linting or formatting tools are set up
 - Extension permissions are limited to GitHub domain and storage API
 - All LLM API keys are stored in Chrome's sync storage
+
+## Pre-commit Requirements
+Before creating any commit, you MUST:
+1. Run `npm run build` to ensure the build passes
+2. Verify that TypeScript compilation succeeds with `npx tsc --noEmit`
+3. Only proceed with commit if both commands complete successfully without errors
