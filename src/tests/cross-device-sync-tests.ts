@@ -365,7 +365,7 @@ class CrossDeviceSyncTests {
     await device2.storageManager.setConfig(config2);
     
     // Simulate sync conflict (both devices have different configs)
-    const syncState = this.globalSyncState.get('extensionConfig');
+    // const syncState = this.globalSyncState.get('extensionConfig');
     
     // In Chrome sync, last-write-wins typically resolves conflicts
     const finalConfig = config2; // Assume device2 wrote last

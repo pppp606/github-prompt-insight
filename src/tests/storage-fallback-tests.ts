@@ -15,12 +15,12 @@ interface FallbackTestResult {
   error?: string;
 }
 
-interface StorageState {
-  isAvailable: boolean;
-  hasData: boolean;
-  lastKnownLanguage?: string;
-  errorMessage?: string;
-}
+// interface StorageState {
+//   isAvailable: boolean;
+//   hasData: boolean;
+//   lastKnownLanguage?: string;
+//   errorMessage?: string;
+// }
 
 class StorageFallbackTests {
   private storageManager: StorageManager;
@@ -36,20 +36,20 @@ class StorageFallbackTests {
     const mockChrome = {
       storage: {
         sync: {
-          get: (keys: any, callback: any) => {
+          get: (_keys: any, callback: any) => {
             this.simulateStorageError(scenario, callback);
           },
-          set: (items: any, callback: any) => {
+          set: (_items: any, callback: any) => {
             this.simulateStorageError(scenario, callback);
           },
-          remove: (keys: any, callback: any) => {
+          remove: (_keys: any, callback: any) => {
             this.simulateStorageError(scenario, callback);
           }
         }
       },
       runtime: {
         lastError: null,
-        sendMessage: (message: any, callback: any) => {
+        sendMessage: (_message: any, callback: any) => {
           this.simulateRuntimeError(scenario, callback);
         }
       }

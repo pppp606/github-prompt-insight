@@ -98,7 +98,7 @@ class ProductionStorageVerification {
       const config = await this.storageManager.getConfig();
       
       // Test write access with a temporary marker
-      const testMarker = `verification_${Date.now()}`;
+      // const testMarker = `verification_${Date.now()}`;
       await this.storageManager.updateConfig({ 
         defaultLanguage: config?.defaultLanguage || 'English'
       });
@@ -260,7 +260,7 @@ class ProductionStorageVerification {
         llmProvider: 'invalid',
         apiKey: '',
         defaultLanguage: 'InvalidLanguage'
-      } as ExtensionConfig;
+      } as unknown as ExtensionConfig;
       
       let errorCaught = false;
       try {

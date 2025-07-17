@@ -13,7 +13,7 @@
  * 6. Cross-Device Sync Simulation
  */
 
-import { StorageManager, ExtensionConfig, getConfig, setConfig, updateConfig } from '../utils/storage';
+import { StorageManager, ExtensionConfig } from '../utils/storage';
 
 // Mock Chrome Storage API for testing
 declare global {
@@ -26,12 +26,12 @@ declare global {
         clear(callback?: () => void): void;
       }
       
-      const sync: StorageArea;
-      const local: StorageArea;
+      var sync: chrome.storage.SyncStorageArea;
+      var local: chrome.storage.LocalStorageArea;
     }
     
     namespace runtime {
-      const lastError: chrome.runtime.LastError | undefined;
+      var lastError: chrome.runtime.LastError | undefined;
       
       interface LastError {
         message?: string;
@@ -105,7 +105,7 @@ class ChromeStorageMock {
   
   // Simulate runtime API
   runtime = {
-    get lastError() { return this.lastError; },
+    get lastError(): chrome.runtime.LastError | undefined { return this.lastError; },
     sendMessage: (message: any, callback?: (response: any) => void) => {
       setTimeout(() => {
         if (message.action === 'get_storage') {
@@ -142,11 +142,11 @@ class ChromeStorageMock {
   
   // Simulate network disconnection (storage unavailable)
   simulateStorageUnavailable() {
-    this.sync.get = (keys: any, callback: any) => {
+    this.sync.get = (_keys: any, callback: any) => {
       this.simulateError('Storage unavailable');
       callback({});
     };
-    this.sync.set = (items: any, callback?: any) => {
+    this.sync.set = (_items: any, callback?: any) => {
       this.simulateError('Storage unavailable');
       callback?.();
     };
@@ -169,11 +169,11 @@ const testConfig: ExtensionConfig = {
   maxTokens: 2048
 };
 
-const updatedConfig: ExtensionConfig = {
-  ...testConfig,
-  defaultLanguage: 'Spanish',
-  temperature: 0.8
-};
+// const updatedConfig: ExtensionConfig = {
+//   ...testConfig,
+//   defaultLanguage: 'Spanish',
+//   temperature: 0.8
+// };
 
 // Test Suite
 class StoragePersistenceTests {
@@ -272,11 +272,11 @@ class StoragePersistenceTests {
       await this.storageManager.setConfig(testConfig);
       
       // Simulate session end and restart
-      const session1Storage = this.chromeMock.getStorageContents();
+      // const session1Storage = this.chromeMock.getStorageContents();
       
       // Session 2: New storage manager (simulating extension reload)
       const session2StorageManager = new StorageManager();
-      const retrievedConfig = await session2StorageManager.getConfig();
+      // const retrievedConfig = await session2StorageManager.getConfig();
       
       // Session 3: Update language setting
       await session2StorageManager.updateConfig({ defaultLanguage: 'Spanish' });
