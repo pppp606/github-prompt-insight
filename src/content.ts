@@ -131,6 +131,7 @@ class GitHubMarkdownEnhancer {
       '.d-flex.gap-2:has(a[href*="/raw/"])',
       '.react-blob-header-edit-and-raw-actions .BtnGroup',
       '.Box-header .BtnGroup',
+      '.prc-ButtonGroup-ButtonGroup-vcMeG', // New Primer React button group class
       // Fallback: any button group near the file content
       '.repository-content .BtnGroup',
       '.file-navigation .BtnGroup'
@@ -174,9 +175,16 @@ class GitHubMarkdownEnhancer {
       this.summarizeElement(markdownElement);
     });
 
+    // Wrap buttons in div containers for new Primer React structure
+    const translateContainer = document.createElement('div');
+    translateContainer.appendChild(translateButton);
+    
+    const summarizeContainer = document.createElement('div');
+    summarizeContainer.appendChild(summarizeButton);
+
     // Insert buttons at the end of the button group
-    buttonGroup.appendChild(translateButton);
-    buttonGroup.appendChild(summarizeButton);
+    buttonGroup.appendChild(translateContainer);
+    buttonGroup.appendChild(summarizeContainer);
   }
 
   private createStandaloneButtons(element: HTMLElement): void {
@@ -204,8 +212,8 @@ class GitHubMarkdownEnhancer {
   private createPrimerButton(text: string, className: string, onclick: () => void): HTMLButtonElement {
     const button = document.createElement('button');
     
-    // Use GitHub's Primer CSS classes
-    button.className = `btn btn-sm ${className}`;
+    // Use GitHub's new Primer React CSS classes
+    button.className = `btn btn-sm prc-Button-ButtonBase-c50BI ${className}`;
     button.type = 'button';
     button.textContent = text;
     
