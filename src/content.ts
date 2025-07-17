@@ -217,6 +217,13 @@ class GitHubMarkdownEnhancer {
     button.type = 'button';
     button.textContent = text;
     
+    // Apply inline styles to override default styles
+    button.style.cssText = `
+      padding: 0px 6px;
+      height: 28px;
+      border-radius: 0;
+    `;
+    
     button.addEventListener('click', onclick);
     
     return button;
