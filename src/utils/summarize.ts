@@ -166,7 +166,8 @@ export class SummarizeService {
 export async function summarizeElement(
   element: HTMLElement,
   llmWrapper: LLMWrapper,
-  maxSentences: number = 2
+  maxSentences: number = 2,
+  language?: string
 ): Promise<LLMResponse> {
   if (!element) {
     throw new Error('Element is required');
@@ -179,8 +180,8 @@ export async function summarizeElement(
     throw new Error('No valid content to summarize');
   }
 
-  const service = new SummarizeService(llmWrapper);
-  return service.summarize(rawText, maxSentences);
+  // Use LLMWrapper's summarizeText method which supports language parameter
+  return llmWrapper.summarizeText(rawText, maxSentences, language);
 }
 
 /**

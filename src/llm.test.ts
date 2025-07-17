@@ -259,7 +259,7 @@ Hello world`;
       const longText = 'This is a long text that needs to be summarized. It contains multiple sentences and ideas.';
       await wrapper.summarizeText(longText);
 
-      const expectedPrompt = `Summarize the following text in 2 sentences or less. Be concise and capture the main points:
+      const expectedPrompt = `Summarize the following text in 2 sentences or less in English. Be concise and capture the main points:
 
 ${longText}`;
 
@@ -280,7 +280,7 @@ ${longText}`;
       const longText = 'Text to summarize.';
       await wrapper.summarizeText(longText, 1);
 
-      const expectedPrompt = `Summarize the following text in 1 sentences or less. Be concise and capture the main points:
+      const expectedPrompt = `Summarize the following text in 1 sentences or less in English. Be concise and capture the main points:
 
 ${longText}`;
 
@@ -305,6 +305,223 @@ ${longText}`;
 
       expect(result.content).toBe('This is a concise summary of the original text.');
       expect(result.provider).toBe('openai');
+    });
+
+    describe('with language parameter', () => {
+      it('should create summary in English when no language is specified (default behavior)', async () => {
+        const { ChatOpenAI } = await import('@langchain/openai');
+        const mockInvoke = vi.fn().mockResolvedValue({ content: 'English summary.' });
+        vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
+
+        const config: LLMConfig = {
+          provider: 'openai',
+          apiKey: 'test-key',
+        };
+
+        const wrapper = new LLMWrapper(config);
+        const longText = 'Text to summarize in default language.';
+        await wrapper.summarizeText(longText, 2);
+
+        const expectedPrompt = `Summarize the following text in 2 sentences or less in English. Be concise and capture the main points:
+
+${longText}`;
+
+        expect(mockInvoke).toHaveBeenCalledWith([expectedPrompt]);
+      });
+
+      it('should create summary in Japanese when Japanese language is specified', async () => {
+        const { ChatOpenAI } = await import('@langchain/openai');
+        const mockInvoke = vi.fn().mockResolvedValue({ content: 'テキストの要約です。' });
+        vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
+
+        const config: LLMConfig = {
+          provider: 'openai',
+          apiKey: 'test-key',
+        };
+
+        const wrapper = new LLMWrapper(config);
+        const longText = 'This is a long text that needs to be summarized in Japanese.';
+        await wrapper.summarizeText(longText, 2, 'Japanese');
+
+        const expectedPrompt = `Summarize the following text in 2 sentences or less in Japanese. Be concise and capture the main points:
+
+${longText}`;
+
+        expect(mockInvoke).toHaveBeenCalledWith([expectedPrompt]);
+      });
+
+      it('should create summary in Spanish when Spanish language is specified', async () => {
+        const { ChatOpenAI } = await import('@langchain/openai');
+        const mockInvoke = vi.fn().mockResolvedValue({ content: 'Resumen del texto en español.' });
+        vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
+
+        const config: LLMConfig = {
+          provider: 'openai',
+          apiKey: 'test-key',
+        };
+
+        const wrapper = new LLMWrapper(config);
+        const longText = 'This text needs to be summarized in Spanish.';
+        await wrapper.summarizeText(longText, 3, 'Spanish');
+
+        const expectedPrompt = `Summarize the following text in 3 sentences or less in Spanish. Be concise and capture the main points:
+
+${longText}`;
+
+        expect(mockInvoke).toHaveBeenCalledWith([expectedPrompt]);
+      });
+
+      it('should create summary in French when French language is specified', async () => {
+        const { ChatOpenAI } = await import('@langchain/openai');
+        const mockInvoke = vi.fn().mockResolvedValue({ content: 'Résumé du texte en français.' });
+        vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
+
+        const config: LLMConfig = {
+          provider: 'openai',
+          apiKey: 'test-key',
+        };
+
+        const wrapper = new LLMWrapper(config);
+        const longText = 'This text needs to be summarized in French.';
+        await wrapper.summarizeText(longText, 1, 'French');
+
+        const expectedPrompt = `Summarize the following text in 1 sentences or less in French. Be concise and capture the main points:
+
+${longText}`;
+
+        expect(mockInvoke).toHaveBeenCalledWith([expectedPrompt]);
+      });
+
+      it('should handle empty language parameter by defaulting to English', async () => {
+        const { ChatOpenAI } = await import('@langchain/openai');
+        const mockInvoke = vi.fn().mockResolvedValue({ content: 'English summary by default.' });
+        vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
+
+        const config: LLMConfig = {
+          provider: 'openai',
+          apiKey: 'test-key',
+        };
+
+        const wrapper = new LLMWrapper(config);
+        const longText = 'Text to summarize with empty language.';
+        await wrapper.summarizeText(longText, 2, '');
+
+        const expectedPrompt = `Summarize the following text in 2 sentences or less in English. Be concise and capture the main points:
+
+${longText}`;
+
+        expect(mockInvoke).toHaveBeenCalledWith([expectedPrompt]);
+      });
+
+      it('should handle whitespace-only language parameter by defaulting to English', async () => {
+        const { ChatOpenAI } = await import('@langchain/openai');
+        const mockInvoke = vi.fn().mockResolvedValue({ content: 'English summary by default.' });
+        vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
+
+        const config: LLMConfig = {
+          provider: 'openai',
+          apiKey: 'test-key',
+        };
+
+        const wrapper = new LLMWrapper(config);
+        const longText = 'Text to summarize with whitespace language.';
+        await wrapper.summarizeText(longText, 2, '   ');
+
+        const expectedPrompt = `Summarize the following text in 2 sentences or less in English. Be concise and capture the main points:
+
+${longText}`;
+
+        expect(mockInvoke).toHaveBeenCalledWith([expectedPrompt]);
+      });
+
+      it('should handle special characters and numbers in language parameter', async () => {
+        const { ChatOpenAI } = await import('@langchain/openai');
+        const mockInvoke = vi.fn().mockResolvedValue({ content: 'Summary in Chinese.' });
+        vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
+
+        const config: LLMConfig = {
+          provider: 'openai',
+          apiKey: 'test-key',
+        };
+
+        const wrapper = new LLMWrapper(config);
+        const longText = 'Text to summarize in simplified Chinese.';
+        await wrapper.summarizeText(longText, 2, 'Simplified Chinese (中文)');
+
+        const expectedPrompt = `Summarize the following text in 2 sentences or less in Simplified Chinese (中文). Be concise and capture the main points:
+
+${longText}`;
+
+        expect(mockInvoke).toHaveBeenCalledWith([expectedPrompt]);
+      });
+
+      it('should return summary in specified language', async () => {
+        const { ChatOpenAI } = await import('@langchain/openai');
+        const mockInvoke = vi.fn().mockResolvedValue({ 
+          content: 'Este es un resumen conciso del texto original.',
+          usage: mockLLMResponse.usage,
+        });
+        vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
+
+        const config: LLMConfig = {
+          provider: 'openai',
+          apiKey: 'test-key',
+        };
+
+        const wrapper = new LLMWrapper(config);
+        const result = await wrapper.summarizeText('Long text content here...', 2, 'Spanish');
+
+        expect(result.content).toBe('Este es un resumen conciso del texto original.');
+        expect(result.provider).toBe('openai');
+      });
+
+      it('should work with all providers (Anthropic) and language parameter', async () => {
+        const { ChatAnthropic } = await import('@langchain/anthropic');
+        const mockInvoke = vi.fn().mockResolvedValue({ 
+          content: 'Résumé français du texte.',
+          usage: mockLLMResponse.usage,
+        });
+        vi.mocked(ChatAnthropic).mockReturnValue({ invoke: mockInvoke } as any);
+
+        const config: LLMConfig = {
+          provider: 'anthropic',
+          apiKey: 'test-key',
+        };
+
+        const wrapper = new LLMWrapper(config);
+        const longText = 'Text to summarize in French using Anthropic.';
+        await wrapper.summarizeText(longText, 3, 'French');
+
+        const expectedPrompt = `Summarize the following text in 3 sentences or less in French. Be concise and capture the main points:
+
+${longText}`;
+
+        expect(mockInvoke).toHaveBeenCalledWith([expectedPrompt]);
+      });
+
+      it('should work with all providers (Google) and language parameter', async () => {
+        const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai');
+        const mockInvoke = vi.fn().mockResolvedValue({ 
+          content: 'ドイツ語での要約です。',
+          usage: mockLLMResponse.usage,
+        });
+        vi.mocked(ChatGoogleGenerativeAI).mockReturnValue({ invoke: mockInvoke } as any);
+
+        const config: LLMConfig = {
+          provider: 'google',
+          apiKey: 'test-key',
+        };
+
+        const wrapper = new LLMWrapper(config);
+        const longText = 'Text to summarize in German using Google.';
+        await wrapper.summarizeText(longText, 1, 'German');
+
+        const expectedPrompt = `Summarize the following text in 1 sentences or less in German. Be concise and capture the main points:
+
+${longText}`;
+
+        expect(mockInvoke).toHaveBeenCalledWith([expectedPrompt]);
+      });
     });
   });
 

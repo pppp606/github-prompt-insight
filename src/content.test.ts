@@ -632,9 +632,9 @@ describe('GitHubMarkdownEnhancer', () => {
       
       // Verify structure
       expect(resultDiv.children.length).toBe(2);
-      expect(resultDiv.children[0].style.fontWeight).toBe('bold');
+      expect((resultDiv.children[0] as HTMLElement).style.fontWeight).toBe('bold');
       expect(resultDiv.children[0].textContent).toBe('Summary (3 sentences)');
-      expect(resultDiv.children[1].style.whiteSpace).toBe('pre-wrap');
+      expect((resultDiv.children[1] as HTMLElement).style.whiteSpace).toBe('pre-wrap');
       expect(resultDiv.children[1].textContent).toBe('This is the summary content.');
     });
 

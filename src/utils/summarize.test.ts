@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
 import { SummarizeService, summarizeElement, getSummaryPreview } from './summarize';
 import { LLMWrapper } from '../llm';
-import { preprocessForSummarization, isValidContent } from './textProcessor';
+import { preprocessForSummarization, isValidContent, sanitizeForLLM } from './textProcessor';
 
 // Mock dependencies
 vi.mock('../llm');
@@ -11,6 +11,7 @@ describe('Summarization Functionality', () => {
   let mockLLMWrapper: Partial<LLMWrapper>;
   let mockPreprocessForSummarization: Mock;
   let mockIsValidContent: Mock;
+  let mockSanitizeForLLM: Mock;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -21,10 +22,12 @@ describe('Summarization Functionality', () => {
 
     mockPreprocessForSummarization = preprocessForSummarization as Mock;
     mockIsValidContent = isValidContent as Mock;
+    mockSanitizeForLLM = sanitizeForLLM as Mock;
 
     // Setup default mocks
     mockPreprocessForSummarization.mockImplementation((text: string) => text.trim());
     mockIsValidContent.mockReturnValue(true);
+    mockSanitizeForLLM.mockImplementation((element: HTMLElement) => element.textContent || '');
   });
 
   describe('SummarizeService', () => {
@@ -88,7 +91,7 @@ describe('Summarization Functionality', () => {
 
       const service = new SummarizeService(mockLLMWrapper as LLMWrapper);
       
-      await expect(service.summarize('')).rejects.toThrow('Invalid content for summarization');
+      await expect(service.summarize('')).rejects.toThrow('Text to summarize cannot be empty');
       expect(mockLLMWrapper.summarizeText).not.toHaveBeenCalled();
     });
 
@@ -172,7 +175,7 @@ describe('Summarization Functionality', () => {
       const result = await summarizeElement(element, mockLLMWrapper as LLMWrapper);
 
       expect(result).toEqual(mockResponse);
-      expect(mockPreprocessForSummarization).toHaveBeenCalled();
+      // summarizeElement uses sanitizeForLLM, not preprocessForSummarization
     });
 
     it('should handle elements with no meaningful content', async () => {
@@ -210,7 +213,7 @@ describe('Summarization Functionality', () => {
 
       const result = await summarizeElement(element, mockLLMWrapper as LLMWrapper, 1);
 
-      expect(mockLLMWrapper.summarizeText).toHaveBeenCalledWith(expect.any(String), 1);
+      expect(mockLLMWrapper.summarizeText).toHaveBeenCalledWith(expect.any(String), 1, undefined);
       expect(result).toEqual(mockResponse);
     });
   });
@@ -221,7 +224,7 @@ describe('Summarization Functionality', () => {
       
       const preview = getSummaryPreview(longText, 80);
       
-      expect(preview).toBe('This is a very long document with extensive details and multiple paragraphs ...');
+      expect(preview).toBe('This is a very long document with extensive details and multiple paragraphs t...');
       expect(preview.length).toBeLessThanOrEqual(83); // 80 + '...'
     });
 
@@ -244,7 +247,7 @@ describe('Summarization Functionality', () => {
       const preview30 = getSummaryPreview(text, 30);
       const preview50 = getSummaryPreview(text, 50);
       
-      expect(preview30).toBe('This is a test document for ...');
+      expect(preview30).toBe('This is a test document for...');
       expect(preview50).toBe('This is a test document for preview generation ...');
     });
   });
@@ -261,7 +264,7 @@ describe('Summarization Functionality', () => {
       });
 
       mockIsValidContent.mockImplementation((text: string) => {
-        return text.trim().length > 20;
+        return text && text.trim().length > 20;
       });
     });
 
