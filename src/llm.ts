@@ -41,7 +41,7 @@ export class LLMWrapper {
           openAIApiKey: config.apiKey,
           modelName: config.model || "gpt-3.5-turbo",
           temperature: config.temperature || 0.7,
-          maxTokens: config.maxTokens || 2048,
+          maxTokens: config.maxTokens || 8192,
         });
       
       case "anthropic":
@@ -49,7 +49,7 @@ export class LLMWrapper {
           anthropicApiKey: config.apiKey,
           modelName: config.model || "claude-3-sonnet-20240229",
           temperature: config.temperature || 0.7,
-          maxTokens: config.maxTokens || 2048,
+          maxTokens: config.maxTokens || 8192,
         });
       
       case "google":
@@ -57,7 +57,7 @@ export class LLMWrapper {
           apiKey: config.apiKey,
           modelName: config.model || "gemini-pro",
           temperature: config.temperature || 0.7,
-          maxOutputTokens: config.maxTokens || 2048,
+          maxOutputTokens: config.maxTokens || 8192,
         });
       
       default:
@@ -149,8 +149,17 @@ ${text}`;
     // Default to English if no language is specified or if language is empty/whitespace
     const targetLanguage = language && language.trim().length > 0 ? language.trim() : 'English';
 
-    const prompt = `Summarize the following text in ${maxSentences} sentences or less in ${targetLanguage}. Be concise and capture the main points:
+    const prompt = `Analyze and summarize the following prompt/text with a structured format in ${targetLanguage}:
 
+## Summary Structure:
+1. **Input Data**: What data or context is provided
+2. **Processing Instructions**: What operations or transformations are requested
+3. **Key Requirements**: Specific constraints or special instructions
+4. **Expected Output**: What format and content should be returned
+
+Provide the summary in ${maxSentences} sentences or less for each section. Use bullet points for clarity.
+
+Text to analyze:
 ${text}`;
     
     return this.generateResponse(prompt);
