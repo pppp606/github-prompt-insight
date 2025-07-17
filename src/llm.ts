@@ -137,7 +137,7 @@ ${text}`;
     return this.generateResponse(prompt);
   }
 
-  async summarizeText(text: string, maxSentences: number = 2): Promise<LLMResponse> {
+  async summarizeText(text: string, maxSentences: number = 2, language?: string): Promise<LLMResponse> {
     if (!text || text.trim().length === 0) {
       throw new Error('Text to summarize cannot be empty');
     }
@@ -146,7 +146,10 @@ ${text}`;
       throw new Error('Number of sentences must be between 1 and 10');
     }
 
-    const prompt = `Summarize the following text in ${maxSentences} sentences or less. Be concise and capture the main points:
+    // Default to English if no language is specified or if language is empty/whitespace
+    const targetLanguage = language && language.trim().length > 0 ? language.trim() : 'English';
+
+    const prompt = `Summarize the following text in ${maxSentences} sentences or less in ${targetLanguage}. Be concise and capture the main points:
 
 ${text}`;
     

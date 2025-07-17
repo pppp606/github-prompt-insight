@@ -257,10 +257,13 @@ class GitHubMarkdownEnhancer {
     // Determine optimal summary length based on content
     const optimalLength = getOptimalSummaryLength(rawText, 'documentation');
     
+    // Get language from configuration, fallback to English if not set
+    const targetLanguage = this.config?.defaultLanguage || 'English';
+    
     try {
-      this.showLoading(element, `Summarizing: "${preview}"...`);
+      this.showLoading(element, `Summarizing in ${targetLanguage}: "${preview}"...`);
       
-      const response = await summarizeElement(element, this.llmWrapper, optimalLength);
+      const response = await summarizeElement(element, this.llmWrapper, optimalLength, targetLanguage);
       
       // Format the result for better presentation
       const formattedResult = formatSummaryResult(
@@ -269,7 +272,7 @@ class GitHubMarkdownEnhancer {
         response.provider
       );
       
-      this.showResult(element, formattedResult, `Summary (${optimalLength} sentence${optimalLength > 1 ? 's' : ''})`);
+      this.showResult(element, formattedResult, `Summary in ${targetLanguage} (${optimalLength} sentence${optimalLength > 1 ? 's' : ''})`);
     } catch (error) {
       this.showError(`Summarization failed: ${error instanceof Error ? error.message : String(error)}`);
     }
