@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LLMWrapper } from './llm';
 import { ExtensionConfig, StorageManager } from './utils/storage';
 import { sanitizeForLLM } from './utils/textProcessor';
-import { translateElement } from './utils/translate';
 import { summarizeElement } from './utils/summarize';
 
 // Mock LangChain dependencies
@@ -41,74 +40,6 @@ describe('Integration Tests', () => {
     });
   });
 
-  describe('End-to-End Translation Workflow', () => {
-    it('should complete full translation workflow', async () => {
-      // Setup test content
-      document.body.innerHTML = `
-        <div class="markdown-body">
-          <h1>Getting Started</h1>
-          <p>This is a comprehensive guide to getting started with our application.</p>
-          <pre><code>npm install app</code></pre>
-          <p>After installation, configure your API keys and you're ready to go!</p>
-        </div>
-      `;
-
-      const element = document.querySelector('.markdown-body') as HTMLElement;
-      
-      // Mock LLM response for translation
-      const { ChatOpenAI } = await import('@langchain/openai');
-      const mockInvoke = vi.fn().mockResolvedValue({
-        content: 'はじめに\nこれは、当社のアプリケーションを始めるための包括的なガイドです。\nインストール後、APIキーを設定すれば準備完了です！',
-        usage: mockLLMResponse.usage,
-      });
-      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
-
-      // Create LLM wrapper
-      const config = {
-        provider: 'openai' as const,
-        apiKey: 'sk-test-key',
-        model: 'gpt-3.5-turbo',
-      };
-      const llmWrapper = new LLMWrapper(config);
-
-      // Execute translation
-      const result = await translateElement(element, 'Japanese', llmWrapper);
-
-      // Verify the workflow
-      expect(result.content).toContain('はじめに');
-      expect(result.content).toContain('アプリケーション');
-      expect(result.provider).toBe('openai');
-      expect(mockInvoke).toHaveBeenCalled();
-
-      // Verify that code blocks were excluded from translation
-      const callArguments = mockInvoke.mock.calls[0][0];
-      expect(callArguments[0].content).not.toContain('npm install');
-    });
-
-    it('should handle translation errors gracefully', async () => {
-      document.body.innerHTML = `
-        <div class="markdown-body">
-          <p>Content to translate</p>
-        </div>
-      `;
-
-      const element = document.querySelector('.markdown-body') as HTMLElement;
-      
-      // Mock LLM error
-      const { ChatOpenAI } = await import('@langchain/openai');
-      const mockInvoke = vi.fn().mockRejectedValue(new Error('Rate limit exceeded'));
-      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
-
-      const config = {
-        provider: 'openai' as const,
-        apiKey: 'sk-test-key',
-      };
-      const llmWrapper = new LLMWrapper(config);
-
-      // Execute translation and expect error
-      await expect(translateElement(element, 'Japanese', llmWrapper)).rejects.toThrow('Rate limit exceeded');
-    });
-  });
 
   describe('End-to-End Summarization Workflow', () => {
     it('should complete full summarization workflow', async () => {

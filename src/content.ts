@@ -1,8 +1,7 @@
 import { LLMWrapper, LLMConfig } from './llm';
 import { sanitizeForLLM } from './utils/textProcessor';
 import { ExtensionConfig, storageManager } from './utils/storage';
-import { translateElement, getTranslationPreview, formatTranslationResult } from './utils/translate';
-import { summarizeElement, getSummaryPreview, formatSummaryResult, getOptimalSummaryLength } from './utils/summarize';
+import { summarizeElement, formatSummaryResult, getOptimalSummaryLength } from './utils/summarize';
 
 class GitHubMarkdownEnhancer {
   private config: ExtensionConfig | null = null;
@@ -40,6 +39,9 @@ class GitHubMarkdownEnhancer {
 
   private setupUI(): void {
     if (!this.isGitHubPage()) return;
+
+    // Add CSS for loading spinner animation
+    this.addLoadingSpinnerStyles();
 
     const markdownElements = this.detectMarkdownElements();
     
@@ -105,9 +107,8 @@ class GitHubMarkdownEnhancer {
   }
 
   private addEnhancementButtons(element: HTMLElement): void {
-    // Check if we've already added buttons
-    if (document.querySelector('.github-prompt-insight-translate') || 
-        document.querySelector('.github-prompt-insight-summarize')) {
+    // Check if we've already added button
+    if (document.querySelector('.github-prompt-insight-summarize')) {
       return;
     }
 
@@ -167,42 +168,29 @@ class GitHubMarkdownEnhancer {
   }
 
   private integrateWithButtonGroup(buttonGroup: Element, markdownElement: HTMLElement): void {
-    const translateButton = this.createPrimerButton('Translate', 'github-prompt-insight-translate', () => {
-      this.translateElement(markdownElement);
-    });
-
     const summarizeButton = this.createPrimerButton('Summarize', 'github-prompt-insight-summarize', () => {
       this.summarizeElement(markdownElement);
     });
 
-    // Wrap buttons in div containers for new Primer React structure
-    const translateContainer = document.createElement('div');
-    translateContainer.appendChild(translateButton);
-    
+    // Wrap button in div container for new Primer React structure
     const summarizeContainer = document.createElement('div');
     summarizeContainer.appendChild(summarizeButton);
 
-    // Insert buttons at the end of the button group
-    buttonGroup.appendChild(translateContainer);
+    // Insert button at the end of the button group
     buttonGroup.appendChild(summarizeContainer);
   }
 
   private createStandaloneButtons(element: HTMLElement): void {
     // Fallback implementation when no button group is found
-    console.warn('GitHub Prompt Insight: No button group found, creating standalone buttons');
+    console.warn('GitHub Prompt Insight: No button group found, creating standalone button');
     
     const container = document.createElement('div');
     container.className = 'github-prompt-insight-buttons d-flex gap-2 mb-3';
     
-    const translateButton = this.createPrimerButton('Translate', 'github-prompt-insight-translate', () => {
-      this.translateElement(element);
-    });
-
     const summarizeButton = this.createPrimerButton('Summarize', 'github-prompt-insight-summarize', () => {
       this.summarizeElement(element);
     });
 
-    container.appendChild(translateButton);
     container.appendChild(summarizeButton);
 
     // Insert before the markdown content
@@ -231,35 +219,6 @@ class GitHubMarkdownEnhancer {
 
   // Removed createButton method - now using createPrimerButton instead
 
-  private async translateElement(element: HTMLElement): Promise<void> {
-    if (!this.llmWrapper) {
-      this.showError('Please configure API settings first');
-      return;
-    }
-
-    const targetLanguage = this.config?.defaultLanguage || 'Japanese';
-    const rawText = sanitizeForLLM(element);
-    const preview = getTranslationPreview(rawText, 60);
-    
-    try {
-      this.showLoading(element, `Translating to ${targetLanguage}: "${preview}"...`);
-      
-      const response = await translateElement(element, targetLanguage, this.llmWrapper);
-      
-      // Format the result for better presentation
-      const formattedResult = formatTranslationResult(
-        rawText,
-        response.content,
-        targetLanguage,
-        response.provider
-      );
-      
-      this.showResult(element, formattedResult, `Translation to ${targetLanguage}`);
-    } catch (error) {
-      this.showError(`Translation failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
   private async summarizeElement(element: HTMLElement): Promise<void> {
     if (!this.llmWrapper) {
       this.showError('Please configure API settings first');
@@ -267,7 +226,6 @@ class GitHubMarkdownEnhancer {
     }
 
     const rawText = sanitizeForLLM(element);
-    const preview = getSummaryPreview(rawText, 60);
     
     // Determine optimal summary length based on content
     const optimalLength = getOptimalSummaryLength(rawText, 'documentation');
@@ -275,42 +233,44 @@ class GitHubMarkdownEnhancer {
     // Get language from configuration, fallback to English if not set
     const targetLanguage = this.config?.defaultLanguage || 'English';
     
-    try {
-      this.showLoading(element, `Summarizing in ${targetLanguage}: "${preview}"...`);
-      
+    // Show loading state in button
+    const button = document.querySelector('.github-prompt-insight-summarize') as HTMLButtonElement;
+    const originalText = button?.textContent || 'Summarize';
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = `
+        <span class="loading-spinner" style="
+          display: inline-block;
+          width: 12px;
+          height: 12px;
+          border: 2px solid #586069;
+          border-top-color: transparent;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-right: 6px;
+        "></span>
+        Processing...
+      `;
+    }
+    
+    try {      
       const response = await summarizeElement(element, this.llmWrapper, optimalLength, targetLanguage);
       
       // Format the result for better presentation
       const formattedResult = formatSummaryResult(
-        rawText,
-        response.content,
-        response.provider
+        response.content
       );
       
-      this.showResult(element, formattedResult, `Summary in ${targetLanguage} (${optimalLength} sentence${optimalLength > 1 ? 's' : ''})`);
+      this.showResult(element, formattedResult, `Summary`);
     } catch (error) {
       this.showError(`Summarization failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      // Reset button state
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = originalText;
+      }
     }
-  }
-
-  private showLoading(element: HTMLElement, message: string): void {
-    const existing = element.querySelector('.github-prompt-insight-result');
-    if (existing) existing.remove();
-
-    const loadingDiv = document.createElement('div');
-    loadingDiv.className = 'github-prompt-insight-result';
-    loadingDiv.style.cssText = `
-      background: #f6f8fa;
-      border: 1px solid #d1d5da;
-      border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 12px;
-      font-size: 14px;
-      color: #586069;
-    `;
-    loadingDiv.textContent = message;
-    
-    element.insertBefore(loadingDiv, element.firstChild);
   }
 
   private showResult(element: HTMLElement, content: string, type: string): void {
@@ -340,15 +300,114 @@ class GitHubMarkdownEnhancer {
     header.textContent = type;
 
     const contentDiv = document.createElement('div');
+    contentDiv.className = 'markdown-body';
     contentDiv.style.cssText = `
       color: #24292e;
-      white-space: pre-wrap;
+      background: transparent;
+      font-size: 14px;
     `;
-    contentDiv.textContent = content;
+    contentDiv.innerHTML = this.parseMarkdown(content);
 
     resultDiv.appendChild(header);
     resultDiv.appendChild(contentDiv);
     element.insertBefore(resultDiv, element.firstChild);
+  }
+
+  private parseMarkdown(text: string): string {
+    // Simple markdown parser for common elements
+    let result = text
+      // Headers (process from h4 to h1 to avoid conflicts)
+      .replace(/^#### (.*$)/gm, '<h4>$1</h4>')
+      .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+      .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+      .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+      // Bold and italic
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      // Code blocks
+      .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+      // Inline code
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Handle nested lists
+    result = this.parseNestedLists(result);
+
+    // Continue with other formatting
+    result = result
+      // Line breaks
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br>')
+      // Wrap in paragraphs
+      .replace(/^(?!<[hul])/gm, '<p>')
+      .replace(/(?<!>)$/gm, '</p>')
+      // Clean up empty paragraphs
+      .replace(/<p><\/p>/g, '')
+      .replace(/<p>(<[hul])/g, '$1')
+      .replace(/(<\/[hul]>)<\/p>/g, '$1');
+
+    return result;
+  }
+
+  private parseNestedLists(text: string): string {
+    const lines = text.split('\n');
+    const result: string[] = [];
+    const listStack: { type: 'ul' | 'ol'; indent: number }[] = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const match = line.match(/^(\s*)(-|\d+\.) (.*)$/);
+      
+      if (match) {
+        const indent = match[1].length;
+        const marker = match[2];
+        const content = match[3];
+        const listType = marker === '-' ? 'ul' : 'ol';
+        
+        // Close lists if indentation decreased
+        while (listStack.length > 0 && listStack[listStack.length - 1].indent >= indent) {
+          const closingList = listStack.pop()!;
+          result.push(`</${closingList.type}>`);
+        }
+        
+        // Open new list if needed
+        if (listStack.length === 0 || listStack[listStack.length - 1].indent < indent) {
+          result.push(`<${listType}>`);
+          listStack.push({ type: listType, indent });
+        }
+        
+        result.push(`<li>${content}</li>`);
+      } else {
+        // Close all open lists for non-list lines
+        while (listStack.length > 0) {
+          const closingList = listStack.pop()!;
+          result.push(`</${closingList.type}>`);
+        }
+        result.push(line);
+      }
+    }
+    
+    // Close any remaining open lists
+    while (listStack.length > 0) {
+      const closingList = listStack.pop()!;
+      result.push(`</${closingList.type}>`);
+    }
+    
+    return result.join('\n');
+  }
+
+  private addLoadingSpinnerStyles(): void {
+    // Check if styles already exist
+    if (document.getElementById('github-prompt-insight-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'github-prompt-insight-styles';
+    style.textContent = `
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   private showError(message: string): void {

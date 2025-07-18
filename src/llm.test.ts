@@ -187,62 +187,6 @@ describe('LLM Integration', () => {
     });
   });
 
-  describe('translateText', () => {
-    it('should create correct translation prompt', async () => {
-      const { ChatOpenAI } = await import('@langchain/openai');
-      const mockInvoke = vi.fn().mockResolvedValue({ content: 'こんにちは世界' });
-      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
-
-      const config: LLMConfig = {
-        provider: 'openai',
-        apiKey: 'test-key',
-      };
-
-      const wrapper = new LLMWrapper(config);
-      await wrapper.translateText('Hello world', 'Japanese');
-
-      const expectedPrompt = `Translate the following text to Japanese. Only return the translated text without any additional explanation or formatting:
-
-Hello world`;
-
-      expect(mockInvoke).toHaveBeenCalledWith([expectedPrompt]);
-    });
-
-    it('should return translated text', async () => {
-      const { ChatOpenAI } = await import('@langchain/openai');
-      const mockInvoke = vi.fn().mockResolvedValue({ 
-        content: 'Bonjour le monde',
-        usage: mockLLMResponse.usage,
-      });
-      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
-
-      const config: LLMConfig = {
-        provider: 'openai',
-        apiKey: 'test-key',
-      };
-
-      const wrapper = new LLMWrapper(config);
-      const result = await wrapper.translateText('Hello world', 'French');
-
-      expect(result.content).toBe('Bonjour le monde');
-      expect(result.provider).toBe('openai');
-    });
-
-    it('should handle translation errors', async () => {
-      const { ChatOpenAI } = await import('@langchain/openai');
-      const mockInvoke = vi.fn().mockRejectedValue(new Error('Translation failed'));
-      vi.mocked(ChatOpenAI).mockReturnValue({ invoke: mockInvoke } as any);
-
-      const config: LLMConfig = {
-        provider: 'openai',
-        apiKey: 'test-key',
-      };
-
-      const wrapper = new LLMWrapper(config);
-      
-      await expect(wrapper.translateText('Hello', 'Spanish')).rejects.toThrow('LLM generation failed: Translation failed');
-    });
-  });
 
   describe('summarizeText', () => {
     it('should create correct summarization prompt with default sentences', async () => {

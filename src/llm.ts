@@ -121,22 +121,6 @@ export class LLMWrapper {
     this.lastRequestTime = Date.now();
   }
 
-  async translateText(text: string, targetLanguage: string): Promise<LLMResponse> {
-    if (!text || text.trim().length === 0) {
-      throw new Error('Text to translate cannot be empty');
-    }
-    
-    if (!targetLanguage || targetLanguage.trim().length === 0) {
-      throw new Error('Target language must be specified');
-    }
-
-    const prompt = `Translate the following text to ${targetLanguage}. Only return the translated text without any additional explanation or formatting:
-
-${text}`;
-    
-    return this.generateResponse(prompt);
-  }
-
   async summarizeText(text: string, maxSentences: number = 2, language?: string): Promise<LLMResponse> {
     if (!text || text.trim().length === 0) {
       throw new Error('Text to summarize cannot be empty');
@@ -149,15 +133,42 @@ ${text}`;
     // Default to English if no language is specified or if language is empty/whitespace
     const targetLanguage = language && language.trim().length > 0 ? language.trim() : 'English';
 
-    const prompt = `Analyze and summarize the following prompt/text with a structured format in ${targetLanguage}:
+    const prompt = `
+You are a prompt analysis expert. Your task is to help humans understand the structure, intent, and design of any given prompt — regardless of its format, style, or purpose.
+The prompt may be a plain instruction, a dialogue turn, a system prompt for an AI agent, a code-generating directive, or anything else.
+Please analyze the given prompt according to the following structure. Return your output in clearly structured Markdown, using numbered or bulleted lists for readability. Avoid long paragraphs.
 
-## Summary Structure:
-1. **Input Data**: What data or context is provided
-2. **Processing Instructions**: What operations or transformations are requested
-3. **Key Requirements**: Specific constraints or special instructions
-4. **Expected Output**: What format and content should be returned
+---
 
-Provide the summary in ${maxSentences} sentences or less for each section. Use bullet points for clarity.
+### Output Format (Markdown):
+
+#### 1. Purpose
+- What is the goal of this prompt?
+- What task is the AI expected to complete?
+- Is the prompt intended for a human-facing response, internal processing, or agent execution?
+
+#### 2. Internal Structure and Information Flow
+- What internal components or modules does the prompt define or rely on?
+  (e.g., agent state, file system, browser state, memory, user request, history)
+- How is information passed into the system (input types, state descriptions)?
+- How is information expected to be maintained, updated, or reasoned about across steps?
+- Are there distinct stages/phases (e.g., planning → acting → reporting)?
+- Does the prompt define a loop, single-shot task, multi-turn conversation, or another control flow?
+
+#### 3. Behavioral Instructions or Constraints
+- Are there rules or priorities the AI is instructed to follow?
+- Are there forbidden actions or behaviors?
+- Is reasoning style or planning methodology specified?
+
+---
+
+### Output Requirements:
+- Use **clear bullet points or numbered lists** under each section.
+- Keep the output concise and human-readable.
+- Target audience: software engineers. Use precise, technical language and structure your output accordingly.
+- Output language: ${targetLanguage}
+
+---
 
 Text to analyze:
 ${text}`;

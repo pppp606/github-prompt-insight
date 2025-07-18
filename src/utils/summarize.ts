@@ -109,101 +109,6 @@ export class SummarizeService {
 
     return results;
   }
-
-  /**
-   * Generate different summary types (brief, detailed, bullet points)
-   */
-  async summarizeWithType(
-    text: string, 
-    type: 'brief' | 'detailed' | 'bullets',
-    customPrompt?: string
-  ): Promise<LLMResponse> {
-    const processedText = preprocessForSummarization(text);
-
-    if (!isValidContent(processedText)) {
-      throw new Error('Invalid content for summarization');
-    }
-
-    let prompt: string;
-    
-    if (customPrompt) {
-      prompt = `${customPrompt}\n\n${processedText}`;
-    } else {
-      switch (type) {
-        case 'brief':
-          prompt = `Analyze this prompt/documentation and provide a structured summary:
-
-**Format**:
-• Input: [What data/context is given]
-• Process: [What actions are requested]
-• Output: [Expected result format]
-
-Keep it to 1-2 sentences per section.
-
-Text to analyze:
-${processedText}`;
-          break;
-        case 'detailed':
-          prompt = `Provide a comprehensive analysis of this prompt/documentation using the following structure:
-
-1. **Given Data/Context** (2-3 sentences)
-   - What information or resources are provided
-   - Any prerequisites or assumptions
-
-2. **Processing Requirements** (2-3 sentences)
-   - Main operations or transformations requested
-   - Step-by-step process if applicable
-
-3. **Special Instructions** (1-2 sentences)
-   - Constraints, limitations, or specific requirements
-   - Important warnings or considerations
-
-4. **Expected Output** (1-2 sentences)
-   - Format and structure of the result
-   - Success criteria or validation points
-
-Text to analyze:
-${processedText}`;
-          break;
-        case 'bullets':
-          prompt = `Analyze and summarize this prompt/documentation as structured bullet points:
-
-**📥 Input Data:**
-• [List what is provided or given]
-
-**⚙️ Processing Steps:**
-• [List main operations or actions]
-
-**📋 Key Requirements:**
-• [List constraints or special instructions]
-
-**📤 Expected Output:**
-• [List what should be returned]
-
-Limit to 3-5 bullet points per section.
-
-Text to analyze:
-${processedText}`;
-          break;
-        default:
-          throw new Error(`Unsupported summary type: ${type}`);
-      }
-    }
-
-    try {
-      const response = await this.llmWrapper.generateResponse(prompt);
-      
-      response.content = response.content.trim();
-      
-      if (!response.content) {
-        throw new Error('Empty summary result');
-      }
-
-      return response;
-    } catch (error) {
-      throw new Error(`Summarization failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
 }
 
 /**
@@ -228,21 +133,6 @@ export async function summarizeElement(
 
   // Use LLMWrapper's summarizeText method which supports language parameter
   return llmWrapper.summarizeText(rawText, maxSentences, language);
-}
-
-/**
- * Get a preview of text that will be summarized
- */
-export function getSummaryPreview(text: string, maxLength: number = 100): string {
-  if (!text) return '';
-  
-  const cleaned = text.replace(/\s+/g, ' ').trim();
-  
-  if (cleaned.length <= maxLength) {
-    return cleaned;
-  }
-  
-  return cleaned.substring(0, maxLength - 3) + '...';
 }
 
 /**
@@ -320,23 +210,10 @@ export function createSummarizationService(llmWrapper: LLMWrapper): SummarizeSer
  * Format summary result for display
  */
 export function formatSummaryResult(
-  originalText: string,
   summaryText: string,
-  provider: string,
-  estimatedReadTime?: string
-): string {
-  const preview = getSummaryPreview(originalText, 60);
-  const compressionRatio = Math.round(calculateCompressionRatio(originalText, summaryText) * 100);
-  const readTime = estimatedReadTime || estimateReadingTime(originalText);
-  
+): string {  
   return `
-**Summary**
-*Original: "${preview}"*
-*Reading time: ${readTime} → Compressed to ${compressionRatio}%*
-
 ${summaryText}
-
-*Summarized using ${provider}*
   `.trim();
 }
 

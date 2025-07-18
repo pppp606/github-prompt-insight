@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
-import { SummarizeService, summarizeElement, getSummaryPreview } from './summarize';
+import { SummarizeService, summarizeElement } from './summarize';
 import { LLMWrapper } from '../llm';
 import { preprocessForSummarization, isValidContent, sanitizeForLLM } from './textProcessor';
 
@@ -215,40 +215,6 @@ describe('Summarization Functionality', () => {
 
       expect(mockLLMWrapper.summarizeText).toHaveBeenCalledWith(expect.any(String), 1, undefined);
       expect(result).toEqual(mockResponse);
-    });
-  });
-
-  describe('getSummaryPreview function', () => {
-    it('should generate preview for long text', () => {
-      const longText = 'This is a very long document with extensive details and multiple paragraphs that would benefit from summarization to help users quickly understand the main points.';
-      
-      const preview = getSummaryPreview(longText, 80);
-      
-      expect(preview).toBe('This is a very long document with extensive details and multiple paragraphs t...');
-      expect(preview.length).toBeLessThanOrEqual(83); // 80 + '...'
-    });
-
-    it('should return full text if within limit', () => {
-      const shortText = 'Short document text';
-      
-      const preview = getSummaryPreview(shortText, 80);
-      
-      expect(preview).toBe('Short document text');
-    });
-
-    it('should handle empty text', () => {
-      const preview = getSummaryPreview('', 80);
-      expect(preview).toBe('');
-    });
-
-    it('should handle custom length limits', () => {
-      const text = 'This is a test document for preview generation functionality';
-      
-      const preview30 = getSummaryPreview(text, 30);
-      const preview50 = getSummaryPreview(text, 50);
-      
-      expect(preview30).toBe('This is a test document for...');
-      expect(preview50).toBe('This is a test document for preview generation ...');
     });
   });
 
