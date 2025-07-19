@@ -34,15 +34,29 @@ export class LLMWrapper {
     this.llm = this.createLLM(config);
   }
 
+  private isO1Model(modelName: string): boolean {
+    return modelName.startsWith('o1-') || modelName.includes('o1-mini') || modelName.includes('o1-preview');
+  }
+
   private createLLM(config: LLMConfig): ChatOpenAI | ChatAnthropic | ChatGoogleGenerativeAI {
     switch (config.provider) {
       case "openai":
-        return new ChatOpenAI({
-          openAIApiKey: config.apiKey,
-          modelName: config.model || "gpt-3.5-turbo",
-          temperature: config.temperature || 0.7,
-          maxTokens: config.maxTokens || 8192,
-        });
+        const modelName = config.model || "gpt-3.5-turbo";
+        
+        if (this.isO1Model(modelName)) {
+          return new ChatOpenAI({
+            openAIApiKey: config.apiKey,
+            modelName: modelName,
+            temperature: 1.0,
+          });
+        } else {
+          return new ChatOpenAI({
+            openAIApiKey: config.apiKey,
+            modelName: modelName,
+            temperature: config.temperature || 0.7,
+            maxTokens: config.maxTokens || 8192,
+          });
+        }
       
       case "anthropic":
         return new ChatAnthropic({
