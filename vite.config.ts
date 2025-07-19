@@ -8,6 +8,7 @@ export default defineConfig({
       input: {
         popup: resolve(__dirname, 'src/popup.html'),
         options: resolve(__dirname, 'src/options.html'),
+        'options-script': resolve(__dirname, 'src/options.ts'),
         background: resolve(__dirname, 'src/background.ts'),
         content: resolve(__dirname, 'src/content.ts'),
         'content.css': resolve(__dirname, 'src/content.css'),
