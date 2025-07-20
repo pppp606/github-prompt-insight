@@ -1,3 +1,5 @@
+import { getModelsForProvider, getDefaultModelForProvider, ModelInfo } from './models';
+
 interface ExtensionConfig {
   llmProvider: 'openai' | 'anthropic' | 'google';
   apiKey: string;
@@ -9,7 +11,7 @@ class OptionsManager {
   private form: HTMLFormElement;
   private providerSelect: HTMLSelectElement;
   private apiKeyInput: HTMLInputElement;
-  private modelInput: HTMLInputElement;
+  private modelSelect: HTMLSelectElement;
   private modelSection: HTMLElement;
   private modelHelp: HTMLElement;
   private defaultLanguageInput: HTMLInputElement;
@@ -19,7 +21,7 @@ class OptionsManager {
     this.form = document.getElementById('settingsForm') as HTMLFormElement;
     this.providerSelect = document.getElementById('llmProvider') as HTMLSelectElement;
     this.apiKeyInput = document.getElementById('apiKey') as HTMLInputElement;
-    this.modelInput = document.getElementById('model') as HTMLInputElement;
+    this.modelSelect = document.getElementById('model') as HTMLSelectElement;
     this.modelSection = document.getElementById('modelSection') as HTMLElement;
     this.modelHelp = document.getElementById('modelHelp') as HTMLElement;
     this.defaultLanguageInput = document.getElementById('defaultLanguage') as HTMLInputElement;
@@ -39,20 +41,33 @@ class OptionsManager {
     
     if (provider) {
       this.modelSection.style.display = 'block';
+      this.populateModelOptions(provider);
       this.updateModelHelp(provider);
     } else {
       this.modelSection.style.display = 'none';
     }
   }
 
-  private updateModelHelp(provider: 'openai' | 'anthropic' | 'google'): void {
-    const modelInfo = {
-      openai: 'Default: gpt-3.5-turbo (e.g., gpt-4, gpt-3.5-turbo)',
-      anthropic: 'Default: claude-3-sonnet-20240229 (e.g., claude-3-opus-20240229, claude-3-haiku-20240307)',
-      google: 'Default: gemini-pro (e.g., gemini-1.5-pro, gemini-1.0-pro)',
-    };
+  private populateModelOptions(provider: 'openai' | 'anthropic' | 'google'): void {
+    this.modelSelect.innerHTML = '';
+    
+    const defaultModel = getDefaultModelForProvider(provider);
+    const models = getModelsForProvider(provider);
+    
+    models.forEach((model: ModelInfo) => {
+      const option = document.createElement('option');
+      option.value = model.id;
+      option.textContent = model.name + (model.description ? ` - ${model.description}` : '');
+      if (model.id === defaultModel) {
+        option.textContent += ' (Default)';
+      }
+      this.modelSelect.appendChild(option);
+    });
+  }
 
-    this.modelHelp.textContent = modelInfo[provider];
+  private updateModelHelp(provider: 'openai' | 'anthropic' | 'google'): void {
+    const defaultModel = getDefaultModelForProvider(provider);
+    this.modelHelp.textContent = `Default: ${defaultModel}`;
   }
 
   private async handleSubmit(e: Event): Promise<void> {
@@ -61,7 +76,7 @@ class OptionsManager {
     const config: ExtensionConfig = {
       llmProvider: this.providerSelect.value as 'openai' | 'anthropic' | 'google',
       apiKey: this.apiKeyInput.value,
-      model: this.modelInput.value || undefined,
+      model: this.modelSelect.value || undefined,
       defaultLanguage: this.defaultLanguageInput.value,
     };
 
@@ -100,7 +115,9 @@ class OptionsManager {
       if (config) {
         this.providerSelect.value = config.llmProvider;
         this.apiKeyInput.value = config.apiKey;
-        this.modelInput.value = config.model || '';
+        if (config.model) {
+          this.modelSelect.value = config.model;
+        }
         this.defaultLanguageInput.value = config.defaultLanguage;
         this.handleProviderChange();
       }

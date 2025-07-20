@@ -134,9 +134,11 @@
       </div>
       
       <div class="form-group model-section" id="modelSection" style="display: none;">
-        <label for="model">Model (Optional):</label>
-        <input type="text" id="model" name="model" placeholder="Leave empty for default">
-        <div class="help-text" id="modelHelp">Default model will be used if not specified</div>
+        <label for="model">Model:</label>
+        <select id="model" name="model" required>
+          <option value="">Select a model</option>
+        </select>
+        <div class="help-text" id="modelHelp">Choose the specific model to use</div>
       </div>
       
       <div class="form-group">

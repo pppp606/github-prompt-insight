@@ -1,6 +1,7 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { getDefaultModelForProvider } from "./models";
 
 export type LLMProvider = "openai" | "anthropic" | "google";
 
@@ -39,7 +40,7 @@ export class LLMWrapper {
       case "openai":
         return new ChatOpenAI({
           openAIApiKey: config.apiKey,
-          modelName: config.model || "gpt-3.5-turbo",
+          modelName: config.model || getDefaultModelForProvider("openai"),
           temperature: config.temperature || 0.7,
           maxTokens: config.maxTokens || 8192,
         });
@@ -47,7 +48,7 @@ export class LLMWrapper {
       case "anthropic":
         return new ChatAnthropic({
           anthropicApiKey: config.apiKey,
-          modelName: config.model || "claude-3-sonnet-20240229",
+          modelName: config.model || getDefaultModelForProvider("anthropic"),
           temperature: config.temperature || 0.7,
           maxTokens: config.maxTokens || 8192,
         });
@@ -55,7 +56,7 @@ export class LLMWrapper {
       case "google":
         return new ChatGoogleGenerativeAI({
           apiKey: config.apiKey,
-          modelName: config.model || "gemini-pro",
+          modelName: config.model || getDefaultModelForProvider("google"),
           temperature: config.temperature || 0.7,
           maxOutputTokens: config.maxTokens || 8192,
         });
@@ -177,16 +178,7 @@ ${text}`;
   }
 
   private getModelName(): string {
-    switch (this.config.provider) {
-      case "openai":
-        return this.config.model || "gpt-3.5-turbo";
-      case "anthropic":
-        return this.config.model || "claude-3-sonnet-20240229";
-      case "google":
-        return this.config.model || "gemini-pro";
-      default:
-        return "unknown";
-    }
+    return this.config.model || getDefaultModelForProvider(this.config.provider) || "unknown";
   }
 
   private extractUsage(response: any): { promptTokens: number; completionTokens: number; totalTokens: number } | undefined {
